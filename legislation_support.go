@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -9,6 +10,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
+	"github.com/jehiah/legislation.support/internal/resolvers"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -84,6 +87,22 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	return
 }
 
+func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	r.ParseForm()
+	u, err := url.Parse(r.Form.Get("legislation_url"))
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	log.Printf("%s", u.String())
+	body, err := resolvers.Resolvers.Lookup(r.Context(), u)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	json.NewEncoder(w).Encode(body)
+}
+
 func main() {
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
@@ -103,6 +122,7 @@ func main() {
 
 	router := httprouter.New()
 	router.GET("/", app.Index)
+	router.POST("/", app.IndexPost)
 	router.GET("/robots.txt", app.RobotsTXT)
 	router.Handler("GET", "/static/*file", app.staticHandler)
 

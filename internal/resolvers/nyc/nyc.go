@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -32,18 +33,15 @@ func (n NYC) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, 
 	// todo
 	case "intro.nyc":
 		if !introPattern.MatchString(u.Path) {
-			return nil, legislature.ErrNotFound
+			return nil, nil
 		}
 		d, err := n.IntroJSON(ctx, u.String())
 		if err != nil {
-			// 500 ?
-			return nil, legislature.ErrNotFound
+			return nil, err
 		}
 		return n.NewLegislation(d), nil
-	default:
-		return nil, legislature.ErrNotFound
 	}
-	return nil, legislature.ErrNotFound
+	return nil, nil
 }
 
 func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
@@ -68,9 +66,14 @@ func (n NYC) IntroJSON(ctx context.Context, u string) (*db.Legislation, error) {
 	}
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
+		log.Printf("GET %s %s", r.URL.String(), err)
 		return nil, err
 	}
 	defer resp.Body.Close()
+	log.Printf("%d GET %s", resp.StatusCode, r.URL.String())
+	if resp.StatusCode == 404 {
+		return nil, nil
+	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("got http %d", resp.StatusCode)
 	}

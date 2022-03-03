@@ -34,9 +34,6 @@ type Resolvers []Resolver
 func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error) {
 	for _, rr := range r {
 		d, err := rr.Lookup(ctx, u)
-		if err == ErrNotFound {
-			continue
-		}
 		if err != nil {
 			// try others first and defer till end?
 			return nil, err
