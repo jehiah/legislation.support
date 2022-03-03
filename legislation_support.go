@@ -68,7 +68,19 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 }
 
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	io.WriteString(w, "legislation.support")
+	t := newTemplate(a.templateFS, "index.html")
+	type Page struct {
+		Page  string
+		Title string
+	}
+	body := Page{
+		Title: "legislation.support",
+	}
+	err := t.ExecuteTemplate(w, "index.html", body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
 	return
 }
 
@@ -92,6 +104,7 @@ func main() {
 	router := httprouter.New()
 	router.GET("/", app.Index)
 	router.GET("/robots.txt", app.RobotsTXT)
+	router.Handler("GET", "/static/*file", app.staticHandler)
 
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")

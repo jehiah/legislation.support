@@ -1,16 +1,19 @@
-package main
+package resolvers
 
 import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers/nyc"
 )
 
-var Bodies = []legislature.Body{
-	{
-		ID:       1,
+var (
+	NYCCouncil = legislature.Body{
+		ID:       "nyc",
 		Name:     "NYC City Council",
 		Location: "New York City",
 		URL:      "https://council.nyc.gov/",
-		Resolver: nyc.New(),
-	},
+	}
+)
+
+var Resolvers = legislature.Resolvers{
+	nyc.New(NYCCouncil),
 }
