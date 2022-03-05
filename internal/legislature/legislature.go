@@ -16,6 +16,10 @@ type Legislation struct {
 	Session     string
 }
 
+func (l Legislation) Key() string {
+	return l.Body.(string) + "." + l.ID
+}
+
 type BodyID string // i.e. "nyc"
 
 // Body represents a specific legislature

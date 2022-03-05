@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"flag"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/resolvers"
@@ -31,7 +33,8 @@ var static embed.FS
 var americaNewYork, _ = time.LoadLocation("America/New_York")
 
 type App struct {
-	devMode bool
+	devMode   bool
+	firestore *firestore.Client
 
 	staticHandler http.Handler
 	templateFS    fs.FS
@@ -100,6 +103,12 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	if body != nil {
+		a.firestore.Collection("profile").Doc(profile).Collection("bills").Doc(body.Key()).Set(ctx, body)
+		if err != nil {
+			log.Fatalf("Failed adding: %v", err)
+		}
+	}
 	json.NewEncoder(w).Encode(body)
 }
 
@@ -109,9 +118,11 @@ func main() {
 	flag.Parse()
 
 	log.Print("starting server...")
+	ctx := context.Background()
 
 	app := &App{
 		devMode:       *devMode,
+		firestore:     createClient(ctx),
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
 	}

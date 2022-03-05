@@ -12,11 +12,17 @@
 	<div class="row">
 
 <form action="" method="post">
+  <div>
+    <label>profile
+      <input type="text" name="profile" id="profile">
+    </label>
+  </div>
+
   <div class="mb-5 mt-2">
     <label for="legislation-url" class="form-label">Paste URL of Legislation you support</label>
 
 <div class="input-group has-validation">
-    <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://your-legislator.com/bill/A-1234" pattern="https://(intro.nyc|legistar.council.nyc.gov|nysenate.gov)/.*">
+    <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://your-legislator.com/bill/A-1234" pattern="https?://(intro.nyc|legistar.council.nyc.gov|nysenate.gov)/.*">
   <button type="submit" name="support" value="👍" class="btn btn-primary">👍</button>
   <button type="submit" name="support" value="👎" class="btn btn-primary">👎</button>
   <div class="invalid-feedback">
