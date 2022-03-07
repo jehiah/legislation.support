@@ -1,0 +1,29 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+{{define "head"}}
+
+
+{{end}}
+{{define "middle"}}
+
+<p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
+
+<div class="contaner">
+	<div class="row">
+
+<h2>{{.Title}}</h2>
+
+
+</div>
+
+{{range .Bills}}
+  <div class="row">
+    <span class="body">{{.Body}}</span>
+    <span class="legislation-id">{{.ID}}</span>
+    <span class="legislation-title">{{.Title}}</span>
+  </div>
+{{end}}
+
+</div>
+
+{{end}}

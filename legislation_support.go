@@ -20,8 +20,10 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
+	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	"github.com/julienschmidt/httprouter"
+	"google.golang.org/api/iterator"
 )
 
 //go:embed templates/*
@@ -92,6 +94,12 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 
 func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
+	ctx := r.Context()
+	profile := strings.TrimSpace(r.Form.Get("profile"))
+	if profile == "" {
+		http.Error(w, "missing profile", 400)
+		return
+	}
 	u, err := url.Parse(r.Form.Get("legislation_url"))
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -104,12 +112,58 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 	if body != nil {
-		a.firestore.Collection("profile").Doc(profile).Collection("bills").Doc(body.Key()).Set(ctx, body)
+		_, err := a.firestore.Collection("profile").Doc(profile).Collection("bills").Doc(body.Key()).Create(ctx, body)
 		if err != nil {
 			log.Fatalf("Failed adding: %v", err)
 		}
 	}
 	json.NewEncoder(w).Encode(body)
+}
+
+func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	t := newTemplate(a.templateFS, "profile.html")
+	profile := ps.ByName("profile")
+	ctx := r.Context()
+	var bills []legislature.Legislation
+
+	ref := a.firestore.Collection(fmt.Sprintf("profile/%s/bills", profile))
+	iter := ref.Documents(ctx)
+	defer iter.Stop()
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		var b legislature.Legislation
+		err = doc.DataTo(&b)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		bills = append(bills, b)
+
+	}
+
+	type Page struct {
+		Page  string
+		Title string
+		Bills []legislature.Legislation
+	}
+	body := Page{
+		Title: fmt.Sprintf("Legislation Supported by %s", profile),
+		Bills: bills,
+	}
+	err := t.ExecuteTemplate(w, "profile.html", body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
 }
 
 func main() {
@@ -134,6 +188,7 @@ func main() {
 	router := httprouter.New()
 	router.GET("/", app.Index)
 	router.POST("/", app.IndexPost)
+	router.GET("/profile/:profile", app.Profile)
 	router.GET("/robots.txt", app.RobotsTXT)
 	router.Handler("GET", "/static/*file", app.staticHandler)
 

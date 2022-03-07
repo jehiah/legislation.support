@@ -14,10 +14,11 @@ type Legislation struct {
 	Description string
 	URL         string
 	Session     string
+	// dates?
 }
 
 func (l Legislation) Key() string {
-	return l.Body.(string) + "." + l.ID
+	return string(l.Body) + "." + l.ID
 }
 
 type BodyID string // i.e. "nyc"
