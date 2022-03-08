@@ -48,10 +48,20 @@ ui.start('#auth-container', {
         // Session login endpoint is queried and the session cookie is set.
         // CSRF protection should be taken into account.
         // ...
-        const csrfToken = getCookie('csrfToken')
-        return postIdTokenToSessionLogin('/session', idToken, csrfToken);
+        // const csrfToken = getCookie('csrfToken')
+        // return postIdTokenToSessionLogin('/session', idToken, csrfToken);
+
+        return fetch('/session', {
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({id_token:idToken}),
+        });
+
+      }).then(_ => {
+        window.location.href="/?auth=true";
       });
-      window.location.href="/?auth=true";
       return false;
     },
     uiShown: function() {

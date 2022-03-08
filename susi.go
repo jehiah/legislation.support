@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -38,12 +39,12 @@ func (a *App) NewSession(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	var body SessionRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
+		log.Printf("%#v", err)
 		http.Error(w, "invalid json", 422)
 		return
 	}
 
-	// Set session expiration to 5 days.
-	expiresIn := time.Hour * 24 * 5
+	expiresIn := time.Hour * 24 * 13
 
 	// Create the session cookie. This will also verify the ID token in the process.
 	// The session cookie will have the same claims as the ID token.
@@ -51,7 +52,8 @@ func (a *App) NewSession(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	// can be checked to ensure user was recently signed in before creating a session cookie.
 	cookie, err := a.firebase.SessionCookie(r.Context(), body.IDToken, expiresIn)
 	if err != nil {
-		http.Error(w, "Failed to create a session cookie", http.StatusInternalServerError)
+		log.Printf("%#v", err)
+		http.Error(w, "Failed to create a session cookie", 500)
 		return
 	}
 

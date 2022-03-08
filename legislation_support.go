@@ -190,7 +190,10 @@ func main() {
 
 	log.Print("starting server...")
 	ctx := context.Background()
-	firebaseApp, err := firebase.NewApp(ctx, &firebase.Config{ProjectID: "legislation-support"})
+	firebaseApp, err := firebase.NewApp(ctx, &firebase.Config{
+		ProjectID:        "legislation-support",
+		ServiceAccountID: "firebase-adminsdk-q48s8@legislation-support.iam.gserviceaccount.com",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -215,7 +218,7 @@ func main() {
 	router.GET("/", app.Index)
 	router.POST("/", app.IndexPost)
 	router.POST("/session", app.NewSession)
-	router.GET("/sign_out", app.NewSession)
+	router.GET("/sign_out", app.SignOut)
 	router.GET("/profile/:profile", app.Profile)
 	router.GET("/robots.txt", app.RobotsTXT)
 	router.Handler("GET", "/static/*file", app.staticHandler)
