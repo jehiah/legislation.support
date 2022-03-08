@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/auth"
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/legislature"
@@ -37,6 +39,7 @@ var americaNewYork, _ = time.LoadLocation("America/New_York")
 type App struct {
 	devMode   bool
 	firestore *firestore.Client
+	firebase  *auth.Client
 
 	staticHandler http.Handler
 	templateFS    fs.FS
@@ -76,14 +79,28 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 }
 
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	t := newTemplate(a.templateFS, "index.html")
 	type Page struct {
 		Page  string
 		Title string
+		User  string
 	}
 	body := Page{
 		Title: "legislation.support",
 	}
+
+	body.User = a.User(r)
+	if body.User == "" {
+		t := newTemplate(a.templateFS, "susi.html")
+		err := t.ExecuteTemplate(w, "susi.html", body)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+		}
+		return
+	}
+	log.Printf("user %#v", body.User)
+
+	t := newTemplate(a.templateFS, "index.html")
 	err := t.ExecuteTemplate(w, "index.html", body)
 	if err != nil {
 		log.Print(err)
@@ -173,10 +190,19 @@ func main() {
 
 	log.Print("starting server...")
 	ctx := context.Background()
+	firebaseApp, err := firebase.NewApp(ctx, &firebase.Config{ProjectID: "legislation-support"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	authClient, err := firebaseApp.Auth(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	app := &App{
 		devMode:       *devMode,
 		firestore:     createClient(ctx),
+		firebase:      authClient,
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
 	}
@@ -188,6 +214,8 @@ func main() {
 	router := httprouter.New()
 	router.GET("/", app.Index)
 	router.POST("/", app.IndexPost)
+	router.POST("/session", app.NewSession)
+	router.GET("/sign_out", app.NewSession)
 	router.GET("/profile/:profile", app.Profile)
 	router.GET("/robots.txt", app.RobotsTXT)
 	router.Handler("GET", "/static/*file", app.staticHandler)

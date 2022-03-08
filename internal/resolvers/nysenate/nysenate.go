@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
+
+	"github.com/jehiah/legislation.support/internal/legislature"
 )
 
 const apiDomain = "https://legislation.nysenate.gov"
@@ -21,6 +24,33 @@ func NewNYSenateAPI(token string) *NYSenateAPI {
 	return &NYSenateAPI{
 		token: token,
 	}
+}
+
+var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|S)[0-9]+)$")
+
+func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
+	switch u.Hostname() {
+	// case "legistar.council.nyc.gov":
+	// 	if u.Path != "/LegislationDetail.aspx" {
+	// 		return nil, legislature.ErrNotFound
+	// 	}
+	// todo
+	// https://www.nysenate.gov/legislation/bills/2021/S7635
+	case "www.nysenate.gov":
+	default:
+		return nil, nil
+	}
+	p := nysenatePattern.FindStringSubmatch(u.Path)
+	if len(p) != 5 {
+		return nil, nil
+	}
+	session, printNo := p[1], p[3]
+	bill, err := a.GetBill(ctx, session, printNo)
+	if err != nil {
+		return nil, err
+	}
+	// TODO
+	return nil, nil
 }
 
 func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bill, error) {

@@ -1,0 +1,78 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+{{define "head"}}
+
+<link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
+
+{{end}}
+{{define "middle"}}
+
+<p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
+
+<div class="contaner">
+  <div class="row">
+
+  <div id="auth-container"></div>
+  <div id="loader">Loading...</div>
+
+</div>
+</div>
+
+{{end}}
+
+
+
+
+{{define "javascript"}}
+<script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.0/firebase.js"></script>
+<script>
+  var config = {
+    apiKey: "AIzaSyBi2utGsw8d3mROtXjlpxJTRxh1q6Qedic",
+    authDomain: "legislation-support.firebaseapp.com",
+  };
+firebase.initializeApp(config);
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE);
+
+var ui = new firebaseui.auth.AuthUI(firebase.auth());
+
+ui.start('#auth-container', {
+  callbacks: {
+    signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+      console.log(authResult, redirectUrl);
+      // User successfully signed in.
+      // Return type determines whether we continue the redirect automatically
+      // or whether we leave that to developer to handle.
+
+      authResult.user.getIdToken().then(idToken => {
+        // Session login endpoint is queried and the session cookie is set.
+        // CSRF protection should be taken into account.
+        // ...
+        const csrfToken = getCookie('csrfToken')
+        return postIdTokenToSessionLogin('/session', idToken, csrfToken);
+      });
+      window.location.href="/?auth=true";
+      return false;
+    },
+    uiShown: function() {
+      // The widget is rendered.
+      // Hide the loader.
+      document.getElementById('loader').style.display = 'none';
+    }
+  },
+  signInOptions: [
+    {
+      provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+      signInMethod: firebase.auth.EmailAuthProvider.EMAIL_LINK_SIGN_IN_METHOD,
+      requireDisplayName: false
+    }
+  ]
+  // tosUrl: '<your-tos-url>',
+  // privacyPolicyUrl: '<your-privacy-policy-url>'
+});
+
+</script>
+
+
+
+{{end}}
