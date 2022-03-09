@@ -6,9 +6,11 @@ import (
 	"net/url"
 )
 
+// Legislation is uniquely known by an ID w/in a BODY
 type Legislation struct {
 	Body        BodyID
-	ID          string
+	ID          LegislationID
+	DisplayID   string
 	Title       string
 	Summary     string
 	Description string
@@ -17,11 +19,12 @@ type Legislation struct {
 	// dates?
 }
 
-func (l Legislation) Key() string {
-	return string(l.Body) + "." + l.ID
-}
+// func (l Legislation) Key() string {
+// 	return string(l.Body) + "." + string(l.ID)
+// }
 
-type BodyID string // i.e. "nyc"
+type BodyID string        // i.e. "nyc"
+type LegislationID string // i.e. 1234-456 (must not contain a '/')
 
 // Body represents a specific legislature
 type Body struct {

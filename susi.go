@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -13,7 +14,7 @@ type SessionRequest struct {
 	IDToken string `json:"id_token"`
 }
 
-func (a *App) User(r *http.Request) string {
+func (a *App) User(r *http.Request) account.UID {
 	cookie, err := r.Cookie("session")
 	if err != nil {
 		return ""
@@ -22,7 +23,7 @@ func (a *App) User(r *http.Request) string {
 	if err != nil {
 		return ""
 	}
-	return decoded.UID
+	return account.UID(decoded.UID)
 }
 
 func (a *App) SignOut(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

@@ -50,7 +50,8 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 	}
 	return &legislature.Legislation{
 		Body:        n.Body.ID,
-		ID:          d.File,
+		ID:          legislature.LegislationID(strings.TrimPrefix(d.File, "Int ")),
+		DisplayID:   d.File,
 		Title:       d.Name,
 		Summary:     d.Title,
 		Description: d.Summary,

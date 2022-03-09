@@ -82,7 +82,7 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	type Page struct {
 		Page  string
 		Title string
-		UID   string
+		UID   account.UID
 	}
 	body := Page{
 		Title: "legislation.support",
@@ -107,7 +107,7 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	type Page struct {
 		Page     string
 		Title    string
-		UID      string
+		UID      account.UID
 		Profiles []account.Profile
 	}
 	body := Page{
@@ -142,52 +142,92 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	profile := account.Profile{
 		Name:    r.PostForm.Get("name"),
-		ID:      r.PostForm.Get("id"),
+		ID:      account.ProfileID(r.PostForm.Get("id")),
 		UID:     uid,
 		Created: time.Now().UTC(),
+	}
+
+	if !account.IsValidProfileID(profile.ID) {
+		http.Error(w, fmt.Sprintf("profile %q is invalid", profile.ID), 422)
+		return
 	}
 
 	err := a.CreateProfile(ctx, profile)
 	if err != nil {
 		// duplicate?
 		log.Printf("%#v %s", err, err)
-		fmt.Fprintf(w, "That profile name is already taken")
+		http.Error(w, fmt.Sprintf("profile %q is already taken", profile.ID), 409)
 		return
 	}
-	http.Redirect(w, r, "/profile/"+url.PathEscape(profile.ID), 302)
+	http.Redirect(w, r, "/profile/"+url.PathEscape(string(profile.ID)), 302)
 }
 
 func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
 	ctx := r.Context()
-	profile := strings.TrimSpace(r.Form.Get("profile"))
-	if profile == "" {
-		http.Error(w, "missing profile", 400)
+	uid := a.User(r)
+	if uid == "" {
+		http.Redirect(w, r, "/", 302)
 		return
 	}
+
+	profileID := account.ProfileID(ps.ByName("profile"))
+	if !account.IsValidProfileID(profileID) {
+		http.Error(w, fmt.Sprintf("profile %q is invalid", profileID), 422)
+		return
+	}
+
+	profile, err := a.GetProfile(ctx, profileID)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	if profile == nil || profile.UID != uid {
+		http.Error(w, "Permission Denied.", 403)
+		return
+	}
+
 	u, err := url.Parse(r.Form.Get("legislation_url"))
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), 422)
 		return
 	}
 	log.Printf("%s", u.String())
-	body, err := resolvers.Resolvers.Lookup(r.Context(), u)
+	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
 	if err != nil {
+		log.Printf("%s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	if body != nil {
-		_, err := a.firestore.Collection("profile").Doc(profile).Collection("bills").Doc(body.Key()).Create(ctx, body)
+	if bill != nil {
+		err = a.SaveBill(ctx, *bill)
 		if err != nil {
-			log.Fatalf("Failed adding: %v", err)
+			log.Printf("%s", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		oppose := r.Form.Get("support") == "👎"
+		err = a.SaveBookmark(ctx, profileID, account.Bookmark{
+			UID:           uid,
+			Body:          bill.Body,
+			LegislationID: bill.ID,
+			Oppose:        oppose,
+			Created:       time.Now().UTC(),
+		})
+		if err != nil {
+			log.Printf("%s", err)
+			http.Error(w, err.Error(), 500)
+			return
 		}
 	}
-	json.NewEncoder(w).Encode(body)
+	json.NewEncoder(w).Encode(bill)
 }
 
 func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	t := newTemplate(a.templateFS, "profile.html")
-	profileID := ps.ByName("profile")
+	profileID := account.ProfileID(ps.ByName("profile"))
 	ctx := r.Context()
 	uid := a.User(r)
 
@@ -203,14 +243,14 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 
 	if uid == "" && profile.Private {
-		http.Error(w, "Permission Denied. Please authenticate first.", 403)
+		http.Error(w, "Permission Denied.", 403)
 		return
 	}
 
 	type Page struct {
 		Page    string
 		Title   string
-		UID     string
+		UID     account.UID
 		Profile account.Profile
 		Bills   []legislature.Legislation
 	}
