@@ -6,24 +6,50 @@
 {{end}}
 {{define "middle"}}
 
+<div class="row">
+
 <p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
 
-<div class="contaner">
-	<div class="row">
-
-<h2>{{.Title}}</h2>
-
-
 </div>
 
-{{range .Bills}}
-  <div class="row">
-    <span class="body">{{.Body}}</span>
-    <span class="legislation-id">{{.ID}}</span>
-    <span class="legislation-title">{{.Title}}</span>
+{{if .EditMode}}
+<div class="row">
+<form action="" method="post">
+  <div class="mb-5 mt-2">
+    <label for="legislation-url" class="form-label">Paste URL of Legislation you support</label>
+
+  <div class="input-group has-validation">
+    <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://your-legislator.com/bill/A-1234" pattern="https?://(intro.nyc|legistar.council.nyc.gov|www.nysenate.gov)/.*">
+  <button type="submit" name="support" value="👍" class="btn btn-primary">👍</button>
+  <button type="submit" name="support" value="👎" class="btn btn-primary">👎</button>
+  <div class="invalid-feedback">
+    That URL isn't yet supported.
   </div>
+
+  </div>
+
+
+  </div>
+</form>
+</div>
 {{end}}
 
+<div class="row">
+<h2>{{.Profile.Name}}</h2>
 </div>
+
+{{if not .Bookmarks}}
+<div class="row">
+<p>No legislation</p>
+</div>
+{{end}}
+
+{{range .Bookmarks}}
+  <div class="row">
+    <span class="body">{{.BodyID}}</span>
+    <span class="legislation-id"><a href="{{.Legislation.URL}}">{{.LegislationID}}</a></span>
+    <span class="legislation-title">{{.Legislation.Title}}</span>
+  </div>
+{{end}}
 
 {{end}}

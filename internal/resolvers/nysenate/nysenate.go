@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -14,14 +15,16 @@ import (
 const apiDomain = "https://legislation.nysenate.gov"
 
 type NYSenateAPI struct {
+	body  legislature.Body
 	token string
 }
 
-func NewNYSenateAPI(token string) *NYSenateAPI {
+func New(body legislature.Body, token string) *NYSenateAPI {
 	if token == "" {
 		panic("missing token")
 	}
 	return &NYSenateAPI{
+		body:  body,
 		token: token,
 	}
 }
@@ -40,8 +43,10 @@ func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legis
 	default:
 		return nil, nil
 	}
+	log.Printf("found nysenate URL %s", u.String())
 	p := nysenatePattern.FindStringSubmatch(u.Path)
 	if len(p) != 5 {
+		log.Printf("no match %#v", p)
 		return nil, nil
 	}
 	session, printNo := p[1], p[3]
@@ -49,7 +54,18 @@ func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legis
 	if err != nil {
 		return nil, err
 	}
-	// TODO
+	if bill == nil {
+		return nil, nil
+	}
+	return &legislature.Legislation{
+		ID:        legislature.LegislationID(fmt.Sprintf("%d-%s", bill.Session, bill.BasePrintNo)),
+		Body:      a.body.ID,
+		DisplayID: bill.BasePrintNo,
+		Title:     bill.Title,
+		Summary:   bill.Summary,
+		URL:       fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
+	}, nil
+
 	return nil, nil
 }
 
@@ -298,10 +314,7 @@ type Bill struct {
 		Size int `json:"size"`
 	} `json:"calendars"`
 	BillInfoRefs struct {
-		Items struct {
-			A20982013 struct {
-			} `json:"A2098-2013"`
-		} `json:"items"`
-		Size int `json:"size"`
+		Items interface{} `json:"items"`
+		Size  int         `json:"size"`
 	} `json:"billInfoRefs"`
 }

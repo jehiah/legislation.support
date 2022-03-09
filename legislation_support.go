@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -23,7 +22,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
-	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	"github.com/julienschmidt/httprouter"
 )
@@ -162,69 +160,6 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	http.Redirect(w, r, "/profile/"+url.PathEscape(string(profile.ID)), 302)
 }
 
-func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	r.ParseForm()
-	ctx := r.Context()
-	uid := a.User(r)
-	if uid == "" {
-		http.Redirect(w, r, "/", 302)
-		return
-	}
-
-	profileID := account.ProfileID(ps.ByName("profile"))
-	if !account.IsValidProfileID(profileID) {
-		http.Error(w, fmt.Sprintf("profile %q is invalid", profileID), 422)
-		return
-	}
-
-	profile, err := a.GetProfile(ctx, profileID)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	if profile == nil || profile.UID != uid {
-		http.Error(w, "Permission Denied.", 403)
-		return
-	}
-
-	u, err := url.Parse(r.Form.Get("legislation_url"))
-	if err != nil {
-		http.Error(w, err.Error(), 422)
-		return
-	}
-	log.Printf("%s", u.String())
-	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
-	if err != nil {
-		log.Printf("%s", err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	if bill != nil {
-		err = a.SaveBill(ctx, *bill)
-		if err != nil {
-			log.Printf("%s", err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		oppose := r.Form.Get("support") == "👎"
-		err = a.SaveBookmark(ctx, profileID, account.Bookmark{
-			UID:           uid,
-			Body:          bill.Body,
-			LegislationID: bill.ID,
-			Oppose:        oppose,
-			Created:       time.Now().UTC(),
-		})
-		if err != nil {
-			log.Printf("%s", err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-	}
-	json.NewEncoder(w).Encode(bill)
-}
-
 func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	t := newTemplate(a.templateFS, "profile.html")
 	profileID := account.ProfileID(ps.ByName("profile"))
@@ -248,23 +183,26 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 
 	type Page struct {
-		Page    string
-		Title   string
-		UID     account.UID
-		Profile account.Profile
-		Bills   []legislature.Legislation
+		Page      string
+		Title     string
+		UID       account.UID
+		Profile   account.Profile
+		EditMode  bool
+		Bookmarks []account.Bookmark
 	}
 	body := Page{
-		Title:   profile.Name + " (legislation.support)",
-		Profile: *profile,
-		UID:     uid,
+		Title:    profile.Name + " (legislation.support)",
+		Profile:  *profile,
+		EditMode: uid == profile.UID,
+		UID:      uid,
 	}
-	body.Bills, err = a.GetProfileBills(ctx, profileID)
+	body.Bookmarks, err = a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
 		log.Printf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	log.Printf("bookmarks %#v", body.Bookmarks)
 
 	err = t.ExecuteTemplate(w, "profile.html", body)
 	if err != nil {
@@ -273,7 +211,69 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 }
 
+func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	profileID := account.ProfileID(ps.ByName("profile"))
+	ctx := r.Context()
+	uid := a.User(r)
+	r.ParseForm()
+
+	profile, err := a.GetProfile(ctx, profileID)
+	if err != nil {
+		log.Printf("%#v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if profile == nil {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
+	if uid != profile.UID {
+		http.Error(w, "Permission Denied.", 403)
+		return
+	}
+
+	u, err := url.Parse(r.Form.Get("legislation_url"))
+	if err != nil {
+		log.Printf("%#v", err)
+		http.Error(w, err.Error(), 422)
+		return
+	}
+	log.Printf("%s", u.String())
+	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
+	if err != nil {
+		log.Printf("%s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if bill == nil {
+		http.Error(w, fmt.Sprintf("Legislation matching url %q not found", u.String()), 422)
+		return
+	}
+	err = a.SaveBill(ctx, *bill)
+	if err != nil {
+		log.Printf("%s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	oppose := r.Form.Get("support") == "👎"
+	err = a.SaveBookmark(ctx, profileID, account.Bookmark{
+		UID:           uid,
+		BodyID:        bill.Body,
+		LegislationID: bill.ID,
+		Oppose:        oppose,
+		Created:       time.Now().UTC(),
+	})
+	if err != nil {
+		log.Printf("%s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/profile/%s", url.PathEscape(string(profileID))), 302)
+}
+
 func main() {
+	log.SetFlags(log.Lshortfile)
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
 	flag.Parse()
@@ -310,6 +310,7 @@ func main() {
 	router.POST("/session", app.NewSession)
 	router.GET("/sign_out", app.SignOut)
 	router.GET("/profile/:profile", app.Profile)
+	router.POST("/profile/:profile", app.ProfilePost)
 	router.GET("/robots.txt", app.RobotsTXT)
 	router.Handler("GET", "/static/*file", app.staticHandler)
 

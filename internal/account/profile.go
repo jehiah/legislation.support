@@ -24,7 +24,7 @@ type Profile struct {
 }
 
 type Bookmark struct {
-	Body          legislature.BodyID
+	BodyID        legislature.BodyID
 	LegislationID legislature.LegislationID // Legislation Key
 	UID           UID                       // User ID
 
@@ -37,10 +37,13 @@ type Bookmark struct {
 	// Tags []string
 	// Title?
 	// Statement?
+
+	Body        *legislature.Body        `firestore:"-"`
+	Legislation *legislature.Legislation `firestore:"-"`
 }
 
 func (b Bookmark) Key() string {
-	return string(b.Body) + "." + string(b.LegislationID)
+	return string(b.BodyID) + "." + string(b.LegislationID)
 }
 
 func IsValidProfileID(s ProfileID) bool {

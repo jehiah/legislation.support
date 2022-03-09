@@ -52,29 +52,29 @@ func (a *App) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profi
 	return out, nil
 }
 
-func (a *App) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
-	query := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
-	// ref := a.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-	var out []account.Bookmark
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		var p account.Bookmark
-		err = doc.DataTo(&p)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, nil
-}
+// func (a *App) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
+// 	query := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
+// 	// ref := a.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
+// 	iter := query.Documents(ctx)
+// 	defer iter.Stop()
+// 	var out []account.Bookmark
+// 	for {
+// 		doc, err := iter.Next()
+// 		if err == iterator.Done {
+// 			break
+// 		}
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		var p account.Bookmark
+// 		err = doc.DataTo(&p)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		out = append(out, p)
+// 	}
+// 	return out, nil
+// }
 
 func (a *App) CreateProfile(ctx context.Context, p account.Profile) error {
 	p.LastModified = time.Now().UTC()
@@ -99,11 +99,12 @@ func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
 // func (a *App) GetProfileBills(ctx context.Context, profileID string) ([]legislature.Legislation, error) {
 // }
 
-func (a *App) GetProfileBills(ctx context.Context, profileID account.ProfileID) ([]legislature.Legislation, error) {
-	var out []legislature.Legislation
-	query := a.firestore.Collection(fmt.Sprintf("profile/%s/bills", profileID))
+func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.ProfileID) ([]account.Bookmark, error) {
+	var out []account.Bookmark
+	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
 	iter := query.Documents(ctx)
 	defer iter.Stop()
+	bills := []*firestore.DocumentRef{}
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -112,12 +113,27 @@ func (a *App) GetProfileBills(ctx context.Context, profileID account.ProfileID) 
 		if err != nil {
 			return nil, err
 		}
-		var b legislature.Legislation
+		var b account.Bookmark
 		err = doc.DataTo(&b)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, b)
+		bills = append(bills, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
 	}
+
+	docs, err := a.firestore.GetAll(ctx, bills)
+	if err != nil {
+		return nil, err
+	}
+	for i, d := range docs {
+		var l legislature.Legislation
+		err = d.DataTo(&l)
+		if err != nil {
+			return nil, err
+		}
+		out[i].Legislation = &l
+	}
+
 	return out, nil
 }
