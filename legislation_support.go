@@ -22,10 +22,10 @@ import (
 	"firebase.google.com/go/v4/auth"
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
+	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	"github.com/julienschmidt/httprouter"
-	"google.golang.org/api/iterator"
 )
 
 //go:embed templates/*
@@ -78,30 +78,52 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
-func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) SUSI(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	type Page struct {
 		Page  string
 		Title string
-		User  string
+		UID   string
 	}
 	body := Page{
 		Title: "legislation.support",
 	}
+	t := newTemplate(a.templateFS, "susi.html")
+	err := t.ExecuteTemplate(w, "susi.html", body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+	return
+}
 
-	body.User = a.User(r)
-	if body.User == "" {
-		t := newTemplate(a.templateFS, "susi.html")
-		err := t.ExecuteTemplate(w, "susi.html", body)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "Internal Server Error", 500)
-		}
+func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ctx := r.Context()
+	uid := a.User(r)
+	if uid == "" {
+		a.SUSI(w, r, ps)
 		return
 	}
-	log.Printf("user %#v", body.User)
 
-	t := newTemplate(a.templateFS, "index.html")
-	err := t.ExecuteTemplate(w, "index.html", body)
+	type Page struct {
+		Page     string
+		Title    string
+		UID      string
+		Profiles []account.Profile
+	}
+	body := Page{
+		Title: "legislation.support",
+		UID:   uid,
+	}
+	var err error
+	body.Profiles, err = a.GetProfiles(ctx, uid)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	t := newTemplate(a.templateFS, "profiles.html")
+	err = t.ExecuteTemplate(w, "profiles.html", body)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
@@ -110,6 +132,32 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 }
 
 func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ctx := r.Context()
+	uid := a.User(r)
+	if uid == "" {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	r.ParseForm()
+
+	profile := account.Profile{
+		Name:    r.PostForm.Get("name"),
+		ID:      r.PostForm.Get("id"),
+		UID:     uid,
+		Created: time.Now().UTC(),
+	}
+
+	err := a.CreateProfile(ctx, profile)
+	if err != nil {
+		// duplicate?
+		log.Printf("%#v %s", err, err)
+		fmt.Fprintf(w, "That profile name is already taken")
+		return
+	}
+	http.Redirect(w, r, "/profile/"+url.PathEscape(profile.ID), 302)
+}
+
+func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
 	ctx := r.Context()
 	profile := strings.TrimSpace(r.Form.Get("profile"))
@@ -139,44 +187,46 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	t := newTemplate(a.templateFS, "profile.html")
-	profile := ps.ByName("profile")
+	profileID := ps.ByName("profile")
 	ctx := r.Context()
-	var bills []legislature.Legislation
+	uid := a.User(r)
 
-	ref := a.firestore.Collection(fmt.Sprintf("profile/%s/bills", profile))
-	iter := ref.Documents(ctx)
-	defer iter.Stop()
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "Internal Server Error", 500)
-			return
-		}
-		var b legislature.Legislation
-		err = doc.DataTo(&b)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "Internal Server Error", 500)
-			return
-		}
-		bills = append(bills, b)
+	profile, err := a.GetProfile(ctx, profileID)
+	if err != nil {
+		log.Printf("%#v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if profile == nil {
+		http.Error(w, "Not Found", 404)
+		return
+	}
 
+	if uid == "" && profile.Private {
+		http.Error(w, "Permission Denied. Please authenticate first.", 403)
+		return
 	}
 
 	type Page struct {
-		Page  string
-		Title string
-		Bills []legislature.Legislation
+		Page    string
+		Title   string
+		UID     string
+		Profile account.Profile
+		Bills   []legislature.Legislation
 	}
 	body := Page{
-		Title: fmt.Sprintf("Legislation Supported by %s", profile),
-		Bills: bills,
+		Title:   profile.Name + " (legislation.support)",
+		Profile: *profile,
+		UID:     uid,
 	}
-	err := t.ExecuteTemplate(w, "profile.html", body)
+	body.Bills, err = a.GetProfileBills(ctx, profileID)
+	if err != nil {
+		log.Printf("%#v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	err = t.ExecuteTemplate(w, "profile.html", body)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)

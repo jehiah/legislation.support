@@ -1,0 +1,69 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+{{define "head"}}
+
+
+{{end}}
+{{define "middle"}}
+
+<div class="row">
+
+{{ if .Profiles }}
+
+<h2>Your Legislation Profiles</h2>
+
+<ul>
+{{range .Profiles}}
+  <li><a href="/{{.ID}}">{{.Name}}</a></li>
+{{end}}
+</ul>
+
+{{else}}
+
+<h2>First: Create a Legislation Profile</h2>
+
+<p>Pick a Profile Name.</p>
+
+<form action="/" method="post">
+  <input type="hidden" name="id" id="id">
+  <div class="mb-3">
+    <label for="profile">Profile Name</label>
+    <input type="text" name="name" id="profile-name" placeholder="Jane Citizen">
+  </div>
+
+  <p class="preview">Your profile will be available at <code>https://legislation.support/<span id="preview-profile">jane-citizen</span></code></p>
+
+  <div class="mb-3">
+    <button type="submit" class="btn-primary">Create Profile</button>
+  </div>
+
+</form>
+
+{{end}}
+
+</div>
+
+{{end}}
+
+{{define "javascript"}}
+<script type="text/javascript">
+function slugify(text){
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start of text
+    .replace(/-+$/, '');            // Trim - from end of text
+}
+
+function onupdate() {
+  var p = document.getElementById('profile-name').value;
+  if (p === "")  { p = "jane-citizen"; }
+  var slug = slugify(p);
+  document.getElementById('id').value=slug;
+  document.getElementById('preview-profile').textContent = slug;
+}
+document.getElementById('profile').addEventListener("change", onupdate)
+document.getElementById('profile').addEventListener("input", onupdate)
+</script>
+{{end}}
