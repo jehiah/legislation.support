@@ -1,6 +1,7 @@
 package account
 
 import (
+	"net/url"
 	"strings"
 	"time"
 	"unicode"
@@ -21,6 +22,10 @@ type Profile struct {
 	LastModified time.Time
 
 	// Colors?
+}
+
+func (p Profile) Link() string {
+	return "/" + url.PathEscape(string(p.ID))
 }
 
 type Bookmark struct {
@@ -48,7 +53,7 @@ func (b Bookmark) Key() string {
 func IsValidProfileID(s ProfileID) bool {
 	switch s {
 	case "", "sign_out", "sign_in", "about",
-		"session", "static":
+		"session", "static", "search":
 		return false
 	}
 	if strings.IndexFunc(string(s), func(r rune) bool { return (r != '-' && unicode.IsPunct(r)) || unicode.IsSpace(r) }) != -1 {

@@ -8,8 +8,8 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/jehiah/legislator v0.0.0-20220302024936-2f1e8a231b46
-	github.com/julienschmidt/httprouter v1.3.0
 	google.golang.org/api v0.59.0
+	google.golang.org/grpc v1.40.0
 )
 
 require (
@@ -31,6 +31,5 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20211028162531-8db9c33dc351 // indirect
-	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )

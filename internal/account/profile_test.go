@@ -7,7 +7,7 @@ import (
 
 func TestIsValidProfileID(t *testing.T) {
 	type testCase struct {
-		have string
+		have ProfileID
 		want bool
 	}
 	tests := []testCase{

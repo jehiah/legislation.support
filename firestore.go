@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func createClient(ctx context.Context) *firestore.Client {
@@ -18,4 +20,8 @@ func createClient(ctx context.Context) *firestore.Client {
 	// Close client when done with
 	// defer client.Close()
 	return client
+}
+
+func IsAlreadyExists(err error) bool {
+	return status.Code(err) == codes.AlreadyExists
 }

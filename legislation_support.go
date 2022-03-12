@@ -23,7 +23,6 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/resolvers"
-	"github.com/julienschmidt/httprouter"
 )
 
 //go:embed templates/*
@@ -58,7 +57,7 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 }
 
 // RobotsTXT renders /robots.txt
-func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	a.addExpireHeaders(w, time.Hour*24*7)
 	io.WriteString(w, "# robots welcome\n# https://github.com/jehiah/legislation.support\n")
@@ -76,7 +75,7 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
-func (a *App) SUSI(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 	type Page struct {
 		Page  string
 		Title string
@@ -94,11 +93,11 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	return
 }
 
-func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) Index(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := a.User(r)
 	if uid == "" {
-		a.SUSI(w, r, ps)
+		a.SUSI(w, r)
 		return
 	}
 
@@ -129,7 +128,7 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	return
 }
 
-func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := a.User(r)
 	if uid == "" {
@@ -139,15 +138,19 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	r.ParseForm()
 
 	profile := account.Profile{
-		Name:    r.PostForm.Get("name"),
+		Name:    strings.TrimSpace(r.PostForm.Get("name")),
 		ID:      account.ProfileID(r.PostForm.Get("id")),
 		UID:     uid,
 		Created: time.Now().UTC(),
 	}
 
 	if !account.IsValidProfileID(profile.ID) {
-		http.Error(w, fmt.Sprintf("profile %q is invalid", profile.ID), 422)
+		http.Error(w, fmt.Sprintf("profile ID %q is invalid", profile.ID), 422)
 		return
+	}
+
+	if profile.Name == "" {
+		profile.Name = string(profile.ID)
 	}
 
 	err := a.CreateProfile(ctx, profile)
@@ -157,12 +160,11 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Error(w, fmt.Sprintf("profile %q is already taken", profile.ID), 409)
 		return
 	}
-	http.Redirect(w, r, "/profile/"+url.PathEscape(string(profile.ID)), 302)
+	http.Redirect(w, r, profile.Link(), 302)
 }
 
-func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.ProfileID) {
 	t := newTemplate(a.templateFS, "profile.html")
-	profileID := account.ProfileID(ps.ByName("profile"))
 	ctx := r.Context()
 	uid := a.User(r)
 
@@ -211,11 +213,12 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 }
 
-func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	profileID := account.ProfileID(ps.ByName("profile"))
+func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
 	ctx := r.Context()
 	uid := a.User(r)
-	r.ParseForm()
+
+	profileID := account.ProfileID(r.Form.Get("profile_id"))
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
@@ -251,7 +254,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.
 		return
 	}
 	err = a.SaveBill(ctx, *bill)
-	if err != nil {
+	if err != nil && !IsAlreadyExists(err) {
 		log.Printf("%s", err)
 		http.Error(w, err.Error(), 500)
 		return
@@ -266,12 +269,54 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.
 		Notes:         strings.TrimSpace(r.Form.Get("notes")),
 		Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
 	})
-	if err != nil {
+	if err != nil && !IsAlreadyExists(err) {
+		// TODO: update
 		log.Printf("%s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/profile/%s", url.PathEscape(string(profileID))), 302)
+	http.Redirect(w, r, profile.Link(), 302)
+}
+
+func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		switch r.URL.Path {
+		case "/":
+			app.Index(w, r)
+			return
+		case "/sign_out":
+			app.SignOut(w, r)
+			return
+		case "/robots.txt":
+			app.RobotsTXT(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			app.staticHandler.ServeHTTP(w, r)
+			return
+		}
+		if p := account.ProfileID(strings.TrimPrefix(r.URL.Path, "/")); account.IsValidProfileID(p) {
+			app.Profile(w, r, p)
+			return
+		}
+	case "POST":
+		switch r.URL.Path {
+		case "/":
+			app.IndexPost(w, r)
+			return
+		case "/data/profile":
+			app.ProfilePost(w, r)
+			return
+		case "/data/session":
+			app.NewSession(w, r)
+			return
+		}
+	default:
+		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		return
+	}
+	http.NotFound(w, r)
 }
 
 func main() {
@@ -306,23 +351,13 @@ func main() {
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	}
 
-	router := httprouter.New()
-	router.GET("/", app.Index)
-	router.POST("/", app.IndexPost)
-	router.POST("/session", app.NewSession)
-	router.GET("/sign_out", app.SignOut)
-	router.GET("/profile/:profile", app.Profile)
-	router.POST("/profile/:profile", app.ProfilePost)
-	router.GET("/robots.txt", app.RobotsTXT)
-	router.Handler("GET", "/static/*file", app.staticHandler)
-
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8081"
 	}
 
-	var h http.Handler = router
+	var h http.Handler = app
 	if *logRequests {
 		h = handlers.LoggingHandler(os.Stdout, h)
 	}

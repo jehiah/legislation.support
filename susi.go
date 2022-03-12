@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jehiah/legislation.support/internal/account"
-	"github.com/julienschmidt/httprouter"
 )
 
 type SessionRequest struct {
@@ -26,7 +25,7 @@ func (a *App) User(r *http.Request) account.UID {
 	return account.UID(decoded.UID)
 }
 
-func (a *App) SignOut(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) SignOut(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:   "session",
 		Value:  "",
@@ -35,7 +34,7 @@ func (a *App) SignOut(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	http.Redirect(w, r, "/", 302)
 }
 
-func (a *App) NewSession(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) NewSession(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var body SessionRequest
 	err := json.NewDecoder(r.Body).Decode(&body)

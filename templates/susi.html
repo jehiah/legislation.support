@@ -51,9 +51,9 @@ ui.start('#auth-container', {
         // CSRF protection should be taken into account.
         // ...
         // const csrfToken = getCookie('csrfToken')
-        // return postIdTokenToSessionLogin('/session', idToken, csrfToken);
+        // return postIdTokenToSessionLogin('/data/session', idToken, csrfToken);
 
-        return fetch('/session', {
+        return fetch('/data/session', {
           method: 'POST', 
           headers: {
             'Content-Type': 'application/json',
