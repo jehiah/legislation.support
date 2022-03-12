@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/legislature"
+	"github.com/jehiah/legislation.support/internal/resolvers"
 	"google.golang.org/api/iterator"
 )
 
@@ -118,6 +119,8 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 		if err != nil {
 			return nil, err
 		}
+		body := resolvers.Bodies[b.BodyID]
+		b.Body = &body
 		out = append(out, b)
 		bills = append(bills, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
 	}

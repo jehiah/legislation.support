@@ -29,16 +29,11 @@ func New(body legislature.Body, token string) *NYSenateAPI {
 	}
 }
 
-var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|S)[0-9]+)$")
+var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S)[0-9]+)$")
+var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A)[0-9]+)$")
 
 func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
-	// case "legistar.council.nyc.gov":
-	// 	if u.Path != "/LegislationDetail.aspx" {
-	// 		return nil, legislature.ErrNotFound
-	// 	}
-	// todo
-	// https://www.nysenate.gov/legislation/bills/2021/S7635
 	case "www.nysenate.gov":
 	default:
 		return nil, nil

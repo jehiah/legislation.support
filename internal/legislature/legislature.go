@@ -28,10 +28,11 @@ type LegislationID string // i.e. 1234-456 (must not contain a '/')
 
 // Body represents a specific legislature
 type Body struct {
-	ID       BodyID
-	Name     string
-	Location string // ex: New York
-	URL      string
+	ID        BodyID
+	DisplayID string
+	Name      string
+	Location  string // ex: New York
+	URL       string
 }
 
 type Resolver interface {

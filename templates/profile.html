@@ -7,8 +7,9 @@
   border-bottom: 1px solid var(--brand);
 }
 .bookmark {
-  border-top: 1px solid var(--brand);
+  border-top: 1px solid var(--brand-medium);
   margin-bottom: 1rem;
+  padding-top: .5rem;
 }
 .legislation-id {
   display: inline-block;
@@ -16,6 +17,13 @@
 .legislation-title {
   display: inline-block;
   font-weight: 600;
+}
+.tag {
+  display: inline-block;
+  font-size: .8rem;
+  background-color: var(--brand-light);
+  margin: 0 2px;
+  padding: 0 .5rem;
 }
 </style>
 {{end}}
@@ -85,7 +93,9 @@
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
     <div class="legislation-title">{{.Legislation.Title}}</div>
     </div>
-    <div class="body">{{.BodyID}}</div>
+    <div class="tags">
+      <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
+    </div>
   </div>
 {{end}}
 
