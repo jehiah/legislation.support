@@ -26,11 +26,21 @@ var introPattern = regexp.MustCompile("/[0-9]{1,4}-20[12][0-9]$")
 
 func (n NYC) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
-	// case "legistar.council.nyc.gov":
-	// 	if u.Path != "/LegislationDetail.aspx" {
-	// 		return nil, legislature.ErrNotFound
-	// 	}
-	// todo
+	case "legistar.council.nyc.gov":
+		if u.Path != "/LegislationDetail.aspx" {
+			return nil, legislature.ErrNotFound
+		}
+		u, err := n.LookupLegistarLegislationDetail(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		if u != nil {
+			d, err := n.IntroJSON(ctx, u.String())
+			if err != nil {
+				return nil, err
+			}
+			return n.NewLegislation(d), nil
+		}
 	case "intro.nyc":
 		if !introPattern.MatchString(u.Path) {
 			return nil, nil
