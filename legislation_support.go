@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,6 +22,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/resolvers"
+	log "github.com/sirupsen/logrus"
 )
 
 //go:embed templates/*
@@ -145,6 +145,7 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !account.IsValidProfileID(profile.ID) {
+		log.WithField("uid", uid).Infof("profile ID %q is invalid", profile.ID)
 		http.Error(w, fmt.Sprintf("profile ID %q is invalid", profile.ID), 422)
 		return
 	}
@@ -156,7 +157,7 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 	err := a.CreateProfile(ctx, profile)
 	if err != nil {
 		// duplicate?
-		log.Printf("%#v %s", err, err)
+		log.WithField("uid", uid).Warningf("%#v %s", err, err)
 		http.Error(w, fmt.Sprintf("profile %q is already taken", profile.ID), 409)
 		return
 	}
@@ -170,7 +171,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
-		log.Printf("%#v", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -200,7 +201,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	}
 	body.Bookmarks, err = a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
-		log.Printf("%#v", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -208,7 +209,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 
 	err = t.ExecuteTemplate(w, "profile.html", body)
 	if err != nil {
-		log.Print(err)
+		log.WithField("uid", uid).Error(err)
 		http.Error(w, "Internal Server Error", 500)
 	}
 }
@@ -222,7 +223,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
-		log.Printf("%#v", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -235,28 +236,29 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Permission Denied.", 403)
 		return
 	}
-
-	u, err := url.Parse(strings.TrimSpace(r.Form.Get("legislation_url")))
+	legUrl := strings.TrimSpace(r.Form.Get("legislation_url"))
+	u, err := url.Parse(legUrl)
 	if err != nil {
-		log.Printf("%#v", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Warningf("%s", err)
 		http.Error(w, err.Error(), 422)
 		return
 	}
-	log.Printf("%s", u.String())
+	log.WithField("uid", uid).WithField("profileID", profileID).Infof("%s", u.String())
 	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
 	if err != nil {
-		log.Printf("%s", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).WithField("legislation_url", legUrl).Errorf("%s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
 	if bill == nil {
+		log.WithField("uid", uid).WithField("profileID", profileID).WithField("legislation_url", legUrl).Info("matching legislation not found")
 		http.Error(w, fmt.Sprintf("Legislation matching url %q not found", u.String()), 422)
 		return
 	}
 
 	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(*bill))
 	if err != nil {
-		log.Printf("%s", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -268,7 +270,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		// update
 		err = a.UpdateBookmark(ctx, profileID, *bookmark)
 		if err != nil {
-			log.Printf("%s", err)
+			log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -278,7 +280,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 
 	err = a.SaveBill(ctx, *bill)
 	if err != nil && !IsAlreadyExists(err) {
-		log.Printf("%s", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -293,8 +295,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
 	})
 	if err != nil && !IsAlreadyExists(err) {
-		// TODO: update
-		log.Printf("%s", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -342,11 +343,20 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
+// tsFmt is used to match logrus timestamp format
+// w/ our stdlib log fmt (Ldate | Ltime)
+const tsFmt = "2006/01/02 15:04:05"
+
 func main() {
-	log.SetFlags(log.Lshortfile)
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
 	flag.Parse()
+	log.SetReportCaller(true)
+	if *devMode {
+		log.SetFormatter(&log.TextFormatter{TimestampFormat: tsFmt, FullTimestamp: true})
+	} else {
+		log.SetFormatter(&fluentdFormatter{})
+	}
 
 	log.Print("starting server...")
 	ctx := context.Background()

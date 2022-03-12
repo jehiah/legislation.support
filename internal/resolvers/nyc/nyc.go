@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislator/db"
+	log "github.com/sirupsen/logrus"
 )
 
 type NYC struct {

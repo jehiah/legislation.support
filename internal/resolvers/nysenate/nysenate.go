@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
+	log "github.com/sirupsen/logrus"
 )
 
 const apiDomain = "https://legislation.nysenate.gov"

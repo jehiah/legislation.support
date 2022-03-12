@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/jehiah/legislation.support/internal/account"
+	log "github.com/sirupsen/logrus"
 )
 
 type SessionRequest struct {

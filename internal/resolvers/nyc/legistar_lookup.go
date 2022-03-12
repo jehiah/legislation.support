@@ -6,12 +6,13 @@ import (
 	"html"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (n NYC) LookupLegistarLegislationDetail(ctx context.Context, u *url.URL) (*url.URL, error) {

@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 )
 
