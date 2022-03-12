@@ -19,6 +19,9 @@ func (a *App) GetProfile(ctx context.Context, ID account.ProfileID) (*account.Pr
 	}
 	dsnap, err := a.firestore.Collection("profiles").Doc(string(ID)).Get(ctx)
 	if err != nil {
+		if IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if !dsnap.Exists() {

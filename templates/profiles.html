@@ -18,9 +18,12 @@
 {{end}}
 </ul>
 
-{{else}}
+{{end}}
 
-<h2>First: Create a Legislation Profile</h2>
+
+{{if le (len .Profiles) 2}}
+
+<h2>{{if not .Profiles }}First: {{end}}Create a Legislation Profile</h2>
 
 <p>Pick a Profile Name.</p>
 
