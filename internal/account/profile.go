@@ -34,9 +34,8 @@ type Bookmark struct {
 	Created      time.Time
 	LastModified time.Time
 
-	// Tags []string
-	// Title?
-	// Statement?
+	Tags  []string
+	Notes string
 
 	Body        *legislature.Body        `firestore:"-"`
 	Legislation *legislature.Legislation `firestore:"-"`

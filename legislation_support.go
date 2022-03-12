@@ -202,7 +202,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	log.Printf("bookmarks %#v", body.Bookmarks)
+	// log.Printf("bookmarks %#v", body.Bookmarks)
 
 	err = t.ExecuteTemplate(w, "profile.html", body)
 	if err != nil {
@@ -233,7 +233,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.
 		return
 	}
 
-	u, err := url.Parse(r.Form.Get("legislation_url"))
+	u, err := url.Parse(strings.TrimSpace(r.Form.Get("legislation_url")))
 	if err != nil {
 		log.Printf("%#v", err)
 		http.Error(w, err.Error(), 422)
@@ -263,6 +263,8 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request, ps httprouter.
 		LegislationID: bill.ID,
 		Oppose:        oppose,
 		Created:       time.Now().UTC(),
+		Notes:         strings.TrimSpace(r.Form.Get("notes")),
+		Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
 	})
 	if err != nil {
 		log.Printf("%s", err)
