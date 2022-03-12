@@ -29,8 +29,8 @@ func New(body legislature.Body, token string) *NYSenateAPI {
 	}
 }
 
-var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S)[0-9]+)$")
-var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A)[0-9]+)$")
+var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)$")
+var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)$")
 
 func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
