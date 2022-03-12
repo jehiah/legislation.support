@@ -90,6 +90,28 @@ func (a *App) SaveBookmark(ctx context.Context, p account.ProfileID, b account.B
 	return err
 }
 
+func (a *App) UpdateBookmark(ctx context.Context, p account.ProfileID, b account.Bookmark) error {
+	b.LastModified = time.Now().UTC()
+	_, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(b.Key()).Set(ctx, b)
+	return err
+}
+
+func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) (*account.Bookmark, error) {
+	if !account.IsValidProfileID(p) {
+		return nil, nil
+	}
+	dsnap, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(key).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !dsnap.Exists() {
+		return nil, nil
+	}
+	var b account.Bookmark
+	err = dsnap.DataTo(&b)
+	return &b, err
+}
+
 func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
 	// b.LastModified = time.Now().UTC()
 	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)

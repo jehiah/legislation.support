@@ -49,6 +49,9 @@ type Bookmark struct {
 func (b Bookmark) Key() string {
 	return string(b.BodyID) + "." + string(b.LegislationID)
 }
+func BookmarkKey(l legislature.Legislation) string {
+	return string(l.Body) + "." + string(l.ID)
+}
 
 func IsValidProfileID(s ProfileID) bool {
 	switch s {

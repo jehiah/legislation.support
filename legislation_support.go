@@ -253,6 +253,29 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Legislation matching url %q not found", u.String()), 422)
 		return
 	}
+
+	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(*bill))
+	if err != nil {
+		log.Printf("%s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if bookmark != nil {
+		bookmark.Notes = strings.TrimSpace(r.Form.Get("notes"))
+		bookmark.Tags = strings.Fields(strings.TrimSpace(r.Form.Get("tags")))
+		bookmark.Oppose = r.Form.Get("support") == "👎"
+
+		// update
+		err = a.UpdateBookmark(ctx, profileID, *bookmark)
+		if err != nil {
+			log.Printf("%s", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		http.Redirect(w, r, profile.Link(), 302)
+		return
+	}
+
 	err = a.SaveBill(ctx, *bill)
 	if err != nil && !IsAlreadyExists(err) {
 		log.Printf("%s", err)

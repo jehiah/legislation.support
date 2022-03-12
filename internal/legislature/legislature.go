@@ -16,6 +16,7 @@ type Legislation struct {
 	Description string
 	URL         string
 	Session     string
+	// status?
 	// dates?
 }
 
