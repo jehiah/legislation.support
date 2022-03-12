@@ -27,9 +27,12 @@ func (a *App) User(r *http.Request) account.UID {
 
 func (a *App) SignOut(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   "session",
-		Value:  "",
-		MaxAge: 0,
+		Name:     "session",
+		Value:    "",
+		MaxAge:   0,
+		HttpOnly: true,
+		Secure:   !a.devMode,
+		Path:     "/",
 	})
 	http.Redirect(w, r, "/", 302)
 }
@@ -56,7 +59,6 @@ func (a *App) NewSession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create a session cookie", 500)
 		return
 	}
-
 	// Set cookie policy for session cookie.
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
@@ -64,6 +66,7 @@ func (a *App) NewSession(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(expiresIn.Seconds()),
 		HttpOnly: true,
 		Secure:   !a.devMode,
+		Path:     "/",
 	})
 	w.Write([]byte(`{"status": "success"}`))
 }
