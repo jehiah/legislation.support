@@ -7,10 +7,23 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
 	log "github.com/sirupsen/logrus"
 )
+
+var Sessions = legislature.Sessions{
+	// {2023, 2024},
+	{2021, 2022},
+	{2019, 2020},
+	{2017, 2018},
+	{2015, 2016},
+	{2013, 2014},
+	{2011, 2012},
+	{2009, 2010},
+	{2007, 2008},
+}
 
 const apiDomain = "https://legislation.nysenate.gov"
 
@@ -52,13 +65,17 @@ func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legis
 	if bill == nil {
 		return nil, nil
 	}
+	t, _ := time.Parse("2006-01-02T15:04:05", bill.PublishedDateTime)
+
 	return &legislature.Legislation{
-		ID:        legislature.LegislationID(fmt.Sprintf("%d-%s", bill.Session, bill.BasePrintNo)),
-		Body:      a.body.ID,
-		DisplayID: bill.BasePrintNo,
-		Title:     bill.Title,
-		Summary:   bill.Summary,
-		URL:       fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
+		ID:             legislature.LegislationID(fmt.Sprintf("%d-%s", bill.Session, bill.BasePrintNo)),
+		Body:           a.body.ID,
+		DisplayID:      bill.BasePrintNo,
+		Title:          bill.Title,
+		Summary:        bill.Summary,
+		IntroducedDate: t,
+		Session:        Sessions.Find(bill.Session),
+		URL:            fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
 	}, nil
 
 	return nil, nil

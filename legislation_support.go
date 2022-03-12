@@ -256,6 +256,17 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = a.SaveBill(ctx, *bill)
+	if err != nil {
+		if IsAlreadyExists(err) {
+			a.UpdateBill(ctx, *bill)
+		} else {
+			log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+	}
+
 	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(*bill))
 	if err != nil {
 		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
@@ -278,12 +289,6 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.SaveBill(ctx, *bill)
-	if err != nil && !IsAlreadyExists(err) {
-		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
 	oppose := r.Form.Get("support") == "👎"
 	err = a.SaveBookmark(ctx, profileID, account.Bookmark{
 		UID:           uid,

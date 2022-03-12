@@ -14,6 +14,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var Sessions = legislature.Sessions{
+	{2022, 2023},
+	{2018, 2021},
+	{2014, 2017},
+	{2010, 2013},
+	{2006, 2009},
+	{2004, 2005},
+	{2002, 2003},
+	{1998, 2001},
+}
+
+// var CurrentSession = Sessions.Current()
+
 type NYC struct {
 	Body legislature.Body
 }
@@ -59,13 +72,15 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 		return nil
 	}
 	return &legislature.Legislation{
-		Body:        n.Body.ID,
-		ID:          legislature.LegislationID(strings.TrimPrefix(d.File, "Int ")),
-		DisplayID:   d.File,
-		Title:       d.Name,
-		Summary:     d.Title,
-		Description: d.Summary,
-		URL:         "https://intro.nyc/" + strings.TrimPrefix(d.File, "Int "),
+		Body:           n.Body.ID,
+		ID:             legislature.LegislationID(strings.TrimPrefix(d.File, "Int ")),
+		DisplayID:      d.File,
+		Title:          d.Name,
+		Summary:        d.Title,
+		Description:    d.Summary,
+		IntroducedDate: d.IntroDate,
+		Session:        Sessions.Find(d.IntroDate.Year()),
+		URL:            "https://intro.nyc/" + strings.TrimPrefix(d.File, "Int "),
 		// TODO Session
 	}
 }

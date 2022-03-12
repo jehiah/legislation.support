@@ -3,7 +3,23 @@ package legislature
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
+	"time"
+)
+
+type Status string
+
+const (
+	Introduced Status = "introduced"
+
+	// in-progress states
+	// ???
+
+	// terminal states
+	Withdrawn = "withdrawn"
+	Enacted   = "enacted"
+	Vetoed    = "vetoed"
 )
 
 // Legislation is uniquely known by an ID w/in a BODY
@@ -15,9 +31,16 @@ type Legislation struct {
 	Summary     string
 	Description string
 	URL         string
-	Session     string
+	Session     Session
+	Status      Status
+
 	// status?
 	// dates?
+	IntroducedDate time.Time
+
+	// legislation.support dates
+	Added        time.Time
+	LastModified time.Time
 }
 
 // func (l Legislation) Key() string {
@@ -56,3 +79,21 @@ func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
 }
 
 var ErrNotFound = errors.New("Not Found")
+
+type Session struct {
+	StartYear, EndYear int // inclusive
+}
+
+func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
+
+type Sessions []Session
+
+func (s Sessions) Current() Session { return s.Find(time.Now().UTC().Year()) }
+func (s Sessions) Find(year int) Session {
+	for _, ss := range s {
+		if year >= ss.StartYear && year <= ss.EndYear {
+			return ss
+		}
+	}
+	return Session{}
+}

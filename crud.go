@@ -115,11 +115,45 @@ func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) 
 	return &b, err
 }
 
-func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
-	// b.LastModified = time.Now().UTC()
+func (a *App) UpdateBill(ctx context.Context, b legislature.Legislation) error {
+
+	b.LastModified = time.Now().UTC()
 	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
 	// TODO: handle duplicates
 	return err
+}
+
+func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
+	b.Added = time.Now().UTC()
+	b.LastModified = time.Now().UTC()
+	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
+	if IsAlreadyExists(err) {
+		bb, err := a.GetBill(ctx, b.Body, b.ID)
+		if err != nil {
+			return err
+		}
+		bb.IntroducedDate = b.IntroducedDate
+		bb.LastModified = b.LastModified
+		bb.Session = b.Session
+		bb.Title = b.Title
+		bb.Description = b.Description
+		bb.Summary = b.Summary
+		// TODO: more
+		_, err = a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, *bb)
+
+	}
+	// TODO: handle duplicates
+	return err
+}
+
+func (a *App) GetBill(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (*legislature.Legislation, error) {
+	dsnap, err := a.firestore.Collection("bodies").Doc(string(body)).Collection("bills").Doc(string(id)).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var l legislature.Legislation
+	err = dsnap.DataTo(&l)
+	return &l, err
 }
 
 // func (a *App) GetProfileBills(ctx context.Context, profileID string) ([]legislature.Legislation, error) {
