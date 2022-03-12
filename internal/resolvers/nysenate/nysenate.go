@@ -29,8 +29,8 @@ func New(body legislature.Body, token string) *NYSenateAPI {
 	}
 }
 
-var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)$")
-var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)$")
+var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/amendment.*)?$")
+var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/amendment.*)?$")
 
 func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
@@ -40,7 +40,7 @@ func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legis
 	}
 	log.Printf("found nysenate URL %s", u.String())
 	p := nysenatePattern.FindStringSubmatch(u.Path)
-	if len(p) != 5 {
+	if len(p) != 6 {
 		log.Printf("no match %#v", p)
 		return nil, nil
 	}

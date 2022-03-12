@@ -27,6 +27,7 @@ func TestLookup(t *testing.T) {
 	}
 	tests := []testCase{
 		{"https://www.nysenate.gov/legislation/bills/2019/s2892"},
+		{"https://www.nysenate.gov/legislation/bills/2021/s4547/amendment/a"},
 	}
 	a := New(legislature.Body{}, os.Getenv("NY_SENATE_TOKEN"))
 	for i, tc := range tests {
