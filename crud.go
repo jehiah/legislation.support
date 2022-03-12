@@ -102,6 +102,9 @@ func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) 
 	}
 	dsnap, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(key).Get(ctx)
 	if err != nil {
+		if IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if !dsnap.Exists() {

@@ -25,3 +25,6 @@ func createClient(ctx context.Context) *firestore.Client {
 func IsAlreadyExists(err error) bool {
 	return status.Code(err) == codes.AlreadyExists
 }
+func IsNotFound(err error) bool {
+	return status.Code(err) == codes.NotFound
+}
