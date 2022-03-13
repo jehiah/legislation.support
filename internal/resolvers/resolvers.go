@@ -23,21 +23,23 @@ var (
 		Location:  "New York",
 		URL:       "https://www.nysenate.gov/",
 	}
-	// NYAssembly = legislature.Body{
-	// 	ID:        "ny-assembly",
-	// 	Name:      "NY Assembly",
-	// 	DisplayID: "NY-Assembly",
-	// 	Location:  "New York",
-	// 	URL:       "https://assembly.state.ny.us/",
-	// }
+	NYAssembly = legislature.Body{
+		ID:        "ny-assembly",
+		Name:      "NY Assembly",
+		DisplayID: "NY-Assembly",
+		Location:  "New York",
+		URL:       "https://assembly.state.ny.us/",
+	}
 )
 
 var Resolvers = legislature.Resolvers{
 	nyc.New(NYCCouncil),
-	nysenate.New(NYSenate, os.Getenv("NY_SENATE_TOKEN")),
+	nysenate.NewNYSenate(NYSenate, os.Getenv("NY_SENATE_TOKEN")),
+	nysenate.NewNYAssembly(NYAssembly, os.Getenv("NY_SENATE_TOKEN")),
 }
 
 var Bodies map[legislature.BodyID]legislature.Body = map[legislature.BodyID]legislature.Body{
 	NYCCouncil.ID: NYCCouncil,
 	NYSenate.ID:   NYSenate,
+	NYAssembly.ID: NYAssembly,
 }

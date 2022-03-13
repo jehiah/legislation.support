@@ -27,61 +27,112 @@ var Sessions = legislature.Sessions{
 
 const apiDomain = "https://legislation.nysenate.gov"
 
-type NYSenateAPI struct {
-	body  legislature.Body
-	token string
+type NYSenate struct {
+	body legislature.Body
+	api  *NYSenateAPI
 }
 
-func New(body legislature.Body, token string) *NYSenateAPI {
-	if token == "" {
-		panic("missing token")
+func NewNYSenate(body legislature.Body, token string) *NYSenate {
+	return &NYSenate{
+		body: body,
+		api:  NewAPI(token),
 	}
-	return &NYSenateAPI{
-		body:  body,
-		token: token,
+}
+
+type NYAssembly struct {
+	body legislature.Body
+	api  *NYSenateAPI
+}
+
+func NewNYAssembly(body legislature.Body, token string) *NYAssembly {
+	return &NYAssembly{
+		body: body,
+		api:  NewAPI(token),
 	}
 }
 
 var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/amendment.*)?$")
 var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/amendment.*)?$")
 
-func (a NYSenateAPI) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
+func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
 	case "www.nysenate.gov":
 	default:
 		return nil, nil
 	}
-	log.Printf("found nysenate URL %s", u.String())
 	p := nysenatePattern.FindStringSubmatch(u.Path)
 	if len(p) != 6 {
-		log.Printf("no match %#v", p)
+		log.Printf("no match %#v %s", p, u.String())
 		return nil, nil
 	}
+	log.Printf("found nysenate URL %s", u.String())
 	session, printNo := p[1], p[3]
-	bill, err := a.GetBill(ctx, session, printNo)
+	bill, err := a.api.GetBill(ctx, session, printNo)
 	if err != nil {
 		return nil, err
 	}
-	if bill == nil {
+	return billToLegislation(bill, a.body.ID), nil
+}
+func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
+	var session, printNo string
+	switch u.Hostname() {
+	case "www.nysenate.gov":
+		p := nyAssemblyPattern.FindStringSubmatch(u.Path)
+		if len(p) != 6 {
+			log.Printf("no match %#v %s", p, u.String())
+			return nil, nil
+		}
+		log.Printf("found nysenate URL %s", u.String())
+		session, printNo = p[1], p[3]
+	case "assembly.state.ny.us":
+		if u.Path != "/leg/" {
+			return nil, nil
+		}
+		session, printNo = u.Query().Get("term"), u.Query().Get("bn")
+	default:
 		return nil, nil
 	}
-	t, _ := time.Parse("2006-01-02T15:04:05", bill.PublishedDateTime)
+	bill, err := a.api.GetBill(ctx, session, printNo)
+	if err != nil {
+		return nil, err
+	}
+	return billToLegislation(bill, a.body.ID), nil
+}
 
+func billToLegislation(bill *Bill, body legislature.BodyID) *legislature.Legislation {
+	if bill == nil {
+		return nil
+	}
+	t, _ := time.Parse("2006-01-02T15:04:05", bill.PublishedDateTime)
 	return &legislature.Legislation{
 		ID:             legislature.LegislationID(fmt.Sprintf("%d-%s", bill.Session, bill.BasePrintNo)),
-		Body:           a.body.ID,
+		Body:           body,
 		DisplayID:      bill.BasePrintNo,
 		Title:          bill.Title,
 		Summary:        bill.Summary,
 		IntroducedDate: t,
 		Session:        Sessions.Find(bill.Session),
 		URL:            fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
-	}, nil
+	}
+}
 
-	return nil, nil
+func NewAPI(token string) *NYSenateAPI {
+	if token == "" {
+		panic("missing token")
+	}
+	return &NYSenateAPI{
+		token: token,
+	}
+}
+
+type NYSenateAPI struct {
+	token string
 }
 
 func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bill, error) {
+	if session == "" || printNo == "" {
+		return nil, nil
+	}
 	params := &url.Values{"key": []string{a.token}, "view": []string{"with_refs"}}
 	u := apiDomain + fmt.Sprintf("/api/3/bills/%s/%s?", url.PathEscape(session), url.PathEscape(printNo)) + params.Encode()
 	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
