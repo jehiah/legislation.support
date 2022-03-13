@@ -56,6 +56,31 @@ func (a *App) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profi
 	return out, nil
 }
 
+func (a *App) GetRecentBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
+	if limit == 0 || limit > 1000 {
+		limit = 20
+	}
+	iter := a.firestore.CollectionGroup("bills").OrderBy("Added", firestore.Desc).Limit(limit).Documents(ctx)
+	defer iter.Stop()
+	var out []legislature.Legislation
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var o legislature.Legislation
+		err = doc.DataTo(&o)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, nil
+}
+
 // func (a *App) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
 // 	query := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
 // 	// ref := a.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))

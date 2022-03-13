@@ -21,6 +21,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
+	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	log "github.com/sirupsen/logrus"
 )
@@ -75,17 +76,40 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
+type BillBody struct {
+	Legislation legislature.Legislation
+	Body        legislature.Body
+}
+
 func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	type Page struct {
 		Page  string
 		Title string
 		UID   account.UID
+		Bills []BillBody
 	}
+
+	bills, err := a.GetRecentBills(ctx, 10)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
 	body := Page{
 		Title: "legislation.support",
 	}
+
+	for _, b := range bills {
+		body.Bills = append(body.Bills, BillBody{
+			Legislation: b,
+			Body:        resolvers.Bodies[b.Body],
+		})
+	}
+
 	t := newTemplate(a.templateFS, "susi.html")
-	err := t.ExecuteTemplate(w, "susi.html", body)
+	err = t.ExecuteTemplate(w, "susi.html", body)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
