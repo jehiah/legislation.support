@@ -84,6 +84,7 @@ type Session struct {
 	StartYear, EndYear int // inclusive
 }
 
+func (s Session) Active() bool   { return s.EndYear >= time.Now().UTC().Year() }
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
 
 type Sessions []Session

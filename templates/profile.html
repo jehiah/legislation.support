@@ -87,13 +87,40 @@
 </div>
 {{end}}
 
-{{if not .Bookmarks}}
+{{if (and (not .Bookmarks) (not .ArchivedBookmarks)) }}
 <div class="row">
 <p>No legislation</p>
 </div>
 {{end}}
 
 {{range .Bookmarks}}
+  <div class="row bookmark">
+    <div class="row1">
+    <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
+    <div class="legislation-title">{{.Legislation.Title}}</div>
+    </div>
+    {{if .Notes}}
+    <div class="notes">{{.Notes}}</div>
+    {{end}}
+    <div class="tags">
+      <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
+      {{if .Legislation.Session}}
+      <div class="session tag" >session:{{.Legislation.Session}}</div>
+      {{end}}
+      {{range .Tags}}
+      <div class="tag">{{.}}</div>
+      {{end}}
+    </div>
+  </div>
+{{end}}
+
+{{if .ArchivedBookmarks }}
+<div class="row mt-5">
+  <h3>Archived</h3>
+  <p>Legislation from past sessions</p>
+</div>
+{{end}}
+{{range .ArchivedBookmarks}}
   <div class="row bookmark">
     <div class="row1">
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>

@@ -210,12 +210,13 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	}
 
 	type Page struct {
-		Page      string
-		Title     string
-		UID       account.UID
-		Profile   account.Profile
-		EditMode  bool
-		Bookmarks []account.Bookmark
+		Page              string
+		Title             string
+		UID               account.UID
+		Profile           account.Profile
+		EditMode          bool
+		Bookmarks         []account.Bookmark
+		ArchivedBookmarks []account.Bookmark
 	}
 	body := Page{
 		Title:    profile.Name + " (legislation.support)",
@@ -223,11 +224,18 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 		EditMode: uid == profile.UID,
 		UID:      uid,
 	}
-	body.Bookmarks, err = a.GetProfileBookmarks(ctx, profileID)
+	b, err := a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
 		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
+	}
+	for _, bb := range b {
+		if bb.Legislation.Session.Active() {
+			body.Bookmarks = append(body.Bookmarks, bb)
+		} else {
+			body.ArchivedBookmarks = append(body.ArchivedBookmarks, bb)
+		}
 	}
 	// log.Printf("bookmarks %#v", body.Bookmarks)
 
