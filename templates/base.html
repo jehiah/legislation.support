@@ -12,28 +12,39 @@
     <style type="text/css">
 :root {
   --brand:  #6F00AF;
+  --brand-dark-2:  #2b0143;
+  --brand-dark:  #6F00AF;
   --brand-medium: #ad6ad3;
   --brand-light: #e1d3ea;
+  --brand-light-2: #f0ebf3;
+
+  --black: #000;
+  --white:#fff;
+  --grey-dark-2:#333;
+  --grey-dark:#666;
+  --grey-medium:#999;
+  --grey-light:#e0e0e0;
+  --grey-light-2:#f0f0f0;
 }
 
 .navbar {
   background: var(--brand);
-  color: #fff;
+  color: var(--white);
 }
 .navbar a:link, .navbar a:visited {
-  color: #fff;
+  color: var(--white);
   font-size: 1rem;
 }
 
 footer {
   margin-top: 4rem;
   text-align: center;
-  color: #999;
+  color: var(--grey-medium);
   font-size: .8rem;
 }
 
 footer a:link, footer a:visited {
-  color: #666;
+  color: var(--grey-dark);
 }
 .btn-primary {
   background-color: var(--brand);
@@ -56,6 +67,8 @@ footer a:link, footer a:visited {
     </span>
     {{if .UID}}
     <span class="sign-out me-2"><a href="/sign_out">Sign Out</a></span>
+    {{else}}
+    <span class="sign-in me-2"><a href="/sign_in">Sign In</a></span>
     {{end}}
   </div>
 </nav>

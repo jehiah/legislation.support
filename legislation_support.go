@@ -90,11 +90,16 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 		Bills []BillBody
 	}
 
-	bills, err := a.GetRecentBills(ctx, 10)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
+	var bills []legislature.Legislation
+	var err error
+
+	if r.URL.Path == "/" {
+		bills, err = a.GetRecentBills(ctx, 10)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
 	}
 
 	body := Page{
@@ -345,6 +350,9 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
 			app.Index(w, r)
+			return
+		case "/sign_in":
+			app.SUSI(w, r)
 			return
 		case "/sign_out":
 			app.SignOut(w, r)
