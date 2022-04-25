@@ -124,6 +124,12 @@ func (a *App) UpdateBookmark(ctx context.Context, p account.ProfileID, b account
 	return err
 }
 
+func (a *App) DeleteBookmark(ctx context.Context, p account.ProfileID, b legislature.BodyID, l legislature.LegislationID) error {
+	k := account.BookmarkKey(b, l)
+	_, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(k).Delete(ctx)
+	return err
+}
+
 func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) (*account.Bookmark, error) {
 	if !account.IsValidProfileID(p) {
 		return nil, nil

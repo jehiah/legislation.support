@@ -23,6 +23,9 @@ type Profile struct {
 
 	// Colors?
 }
+func (p Profile) HasAccess(u UID) bool {
+	return p.UID == u
+}
 
 func (p Profile) Link() string {
 	return "/" + url.PathEscape(string(p.ID))
@@ -49,8 +52,9 @@ type Bookmark struct {
 func (b Bookmark) Key() string {
 	return string(b.BodyID) + "." + string(b.LegislationID)
 }
-func BookmarkKey(l legislature.Legislation) string {
-	return string(l.Body) + "." + string(l.ID)
+
+func BookmarkKey(b legislature.BodyID, l legislature.LegislationID) string {
+	return string(b) + "." + string(l)
 }
 
 func IsValidProfileID(s ProfileID) bool {

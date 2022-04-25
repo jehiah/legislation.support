@@ -251,16 +251,18 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	}
 }
 
+// ProfilePost handles the add of a new URL to a profile
 func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	ctx := r.Context()
 	uid := a.User(r)
 
 	profileID := account.ProfileID(r.Form.Get("profile_id"))
+	logFields := log.Fields{"uid":uid, "profileID": profileID}
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
-		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -273,23 +275,25 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Permission Denied.", 403)
 		return
 	}
+
 	legUrl := strings.TrimSpace(r.Form.Get("legislation_url"))
 	u, err := url.Parse(legUrl)
 	if err != nil {
-		log.WithField("uid", uid).WithField("profileID", profileID).Warningf("%s", err)
+		log.WithContext(ctx).WithFields(logFields).Warningf("%s", err)
 		http.Error(w, err.Error(), 422)
 		return
 	}
-	log.WithField("uid", uid).WithField("profileID", profileID).Infof("%s", u.String())
+	logFields["legislation_url"] = u.String()
+	log.WithContext(ctx).WithFields(logFields).Infof("parsed URL")
 	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
 	if err != nil {
-		log.WithField("uid", uid).WithField("profileID", profileID).WithField("legislation_url", legUrl).Errorf("%s", err)
+		log.WithContext(ctx).WithFields(logFields).Errorf("%s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
 	if bill == nil {
-		log.WithField("uid", uid).WithField("profileID", profileID).WithField("legislation_url", legUrl).Info("matching legislation not found")
-		http.Error(w, fmt.Sprintf("Legislation matching url %q not found", u.String()), 422)
+		log.WithContext(ctx).WithFields(logFields).Info("matching legislation not found")
+		http.Error(w, fmt.Sprintf("Legislation matching url %q not found", u), 422)
 		return
 	}
 
@@ -298,15 +302,15 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		if IsAlreadyExists(err) {
 			a.UpdateBill(ctx, *bill)
 		} else {
-			log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+			log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
 	}
 
-	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(*bill))
+	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))
 	if err != nil {
-		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -318,7 +322,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		// update
 		err = a.UpdateBookmark(ctx, profileID, *bookmark)
 		if err != nil {
-			log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+			log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -337,11 +341,47 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
 	})
 	if err != nil && !IsAlreadyExists(err) {
-		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
 	http.Redirect(w, r, profile.Link(), 302)
+}
+
+func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	ctx := r.Context()
+	uid := a.User(r)
+
+	profileID := account.ProfileID(r.Form.Get("profile_id"))
+	body, legID := legislature.BodyID(r.Form.Get("body_id")), legislature.LegislationID(r.Form.Get("legislation_id"))
+	logFields := log.Fields{"uid":uid, "profileID": profileID, "body":body, "legislation_id":legID}
+
+	profile, err := a.GetProfile(ctx, profileID)
+	if err != nil {
+		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if profile == nil {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
+	if !profile.HasAccess(uid) {
+		http.Error(w, "Permission Denied.", 403)
+		return
+	}
+
+
+	err = a.DeleteBookmark(ctx, profileID, body, legID)
+	if err != nil {
+		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	http.Redirect(w, r, profile.Link(), 302)
+	return
 }
 
 func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -379,6 +419,12 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "/data/session":
 			app.NewSession(w, r)
+			return
+		}
+	case "DELETE": 
+		switch r.URL.Path {
+		case "/data/profile":
+			app.ProfileRemove(w,r )
 			return
 		}
 	default:
