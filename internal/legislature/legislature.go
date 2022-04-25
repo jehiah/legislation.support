@@ -65,17 +65,19 @@ type Resolver interface {
 type Resolvers []Resolver
 
 func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error) {
+	var e error
 	for _, rr := range r {
 		d, err := rr.Lookup(ctx, u)
 		if err != nil {
-			// try others first and defer till end?
-			return nil, err
+			e = err
+			// try others first and defer last error till end
+			continue	
 		}
 		if d != nil {
 			return d, nil
 		}
 	}
-	return nil, ErrNotFound
+	return nil, e
 }
 
 var ErrNotFound = errors.New("Not Found")

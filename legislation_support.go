@@ -54,6 +54,9 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"Time":    humanize.Time,
 	}
 	t := template.New("empty").Funcs(funcMap)
+	if n == "error.html" {
+		return template.Must(t.ParseFS(fs, filepath.Join("templates", n)))
+	}
 	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
 }
 
@@ -97,7 +100,7 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 		bills, err = a.GetRecentBills(ctx, 10)
 		if err != nil {
 			log.Print(err)
-			http.Error(w, "Internal Server Error", 500)
+			a.WebInternalError500(w, "")
 			return
 		}
 	}
@@ -117,9 +120,39 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 	err = t.ExecuteTemplate(w, "susi.html", body)
 	if err != nil {
 		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
+		a.WebInternalError500(w, "")
 	}
 	return
+}
+
+func (a *App) WebInternalError500(w http.ResponseWriter, msg string) {
+	if msg == "" {
+		msg = "Server Error"
+	}
+	a.WebError(w, 500, msg)
+}
+func (a *App) WebPermissionError403(w http.ResponseWriter, msg string) {
+	if msg == "" {
+		msg = "Permission Denied"
+	}
+	a.WebError(w, 403, msg)
+}
+
+func (a *App) WebError(w http.ResponseWriter, code int, msg string) {
+	type Page struct {
+		Title string
+		Code int
+		Message string
+	}
+	t := newTemplate(a.templateFS, "error.html")
+	err := t.ExecuteTemplate(w, "error.html", Page{
+		Title: fmt.Sprintf("HTTP Error %d", code),
+		Code:code,
+		Message:msg,
+	})
+	if err != nil {
+		log.Errorf("%s", err)
+	}
 }
 
 func (a *App) Index(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +177,7 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request) {
 	body.Profiles, err = a.GetProfiles(ctx, uid)
 	if err != nil {
 		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 
@@ -152,7 +185,7 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request) {
 	err = t.ExecuteTemplate(w, "profiles.html", body)
 	if err != nil {
 		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
+		a.WebInternalError500(w, "")
 	}
 	return
 }
@@ -201,7 +234,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
 		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
-		http.Error(w, err.Error(), 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 	if profile == nil {
@@ -210,7 +243,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	}
 
 	if uid == "" && profile.Private {
-		http.Error(w, "Permission Denied.", 403)
+		a.WebPermissionError403(w, "")
 		return
 	}
 
@@ -232,7 +265,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	b, err := a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
 		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
-		http.Error(w, err.Error(), 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 	for _, bb := range b {
@@ -247,7 +280,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	err = t.ExecuteTemplate(w, "profile.html", body)
 	if err != nil {
 		log.WithField("uid", uid).Error(err)
-		http.Error(w, "Internal Server Error", 500)
+		a.WebInternalError500(w, "")
 	}
 }
 
@@ -263,7 +296,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		http.Error(w, err.Error(), 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 	if profile == nil {
@@ -272,7 +305,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if uid != profile.UID {
-		http.Error(w, "Permission Denied.", 403)
+		a.WebPermissionError403(w, "")
 		return
 	}
 
@@ -280,7 +313,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(legUrl)
 	if err != nil {
 		log.WithContext(ctx).WithFields(logFields).Warningf("%s", err)
-		http.Error(w, err.Error(), 422)
+		a.WebError(w, 422, err.Error())
 		return
 	}
 	logFields["legislation_url"] = u.String()
@@ -288,7 +321,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
 	if err != nil {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%s", err)
-		http.Error(w, err.Error(), 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 	if bill == nil {
@@ -303,7 +336,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 			a.UpdateBill(ctx, *bill)
 		} else {
 			log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-			http.Error(w, err.Error(), 500)
+			a.WebInternalError500(w, "")
 			return
 		}
 	}
@@ -311,7 +344,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))
 	if err != nil {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		http.Error(w, err.Error(), 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 	if bookmark != nil {
@@ -323,7 +356,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		err = a.UpdateBookmark(ctx, profileID, *bookmark)
 		if err != nil {
 			log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-			http.Error(w, err.Error(), 500)
+			a.WebInternalError500(w, "")
 			return
 		}
 		http.Redirect(w, r, profile.Link(), 302)
@@ -342,7 +375,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil && !IsAlreadyExists(err) {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		http.Error(w, err.Error(), 500)
+		a.WebInternalError500(w, "")
 		return
 	}
 	http.Redirect(w, r, profile.Link(), 302)

@@ -41,7 +41,7 @@ func (n NYC) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, 
 	switch u.Hostname() {
 	case "legistar.council.nyc.gov":
 		if u.Path != "/LegislationDetail.aspx" {
-			return nil, legislature.ErrNotFound
+			return nil, nil
 		}
 		u, err := n.LookupLegistarLegislationDetail(ctx, u)
 		if err != nil {
@@ -81,7 +81,6 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 		IntroducedDate: d.IntroDate,
 		Session:        Sessions.Find(d.IntroDate.Year()),
 		URL:            "https://intro.nyc/" + strings.TrimPrefix(d.File, "Int "),
-		// TODO Session
 	}
 }
 
