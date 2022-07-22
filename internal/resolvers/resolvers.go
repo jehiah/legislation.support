@@ -15,6 +15,7 @@ var (
 		DisplayID: "NYC-Council",
 		Location:  "New York City",
 		URL:       "https://council.nyc.gov/",
+		Sort:      legislature.GenericLegislationSort,
 	}
 	NYSenate = legislature.Body{
 		ID:        "nysenate",
@@ -22,6 +23,7 @@ var (
 		DisplayID: "NY-Senate",
 		Location:  "New York",
 		URL:       "https://www.nysenate.gov/",
+		Sort:      nysenate.LegislationSort,
 	}
 	NYAssembly = legislature.Body{
 		ID:        "ny-assembly",
@@ -29,6 +31,7 @@ var (
 		DisplayID: "NY-Assembly",
 		Location:  "New York",
 		URL:       "https://assembly.state.ny.us/",
+		Sort:      nysenate.LegislationSort,
 	}
 )
 

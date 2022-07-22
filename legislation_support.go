@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -140,15 +141,15 @@ func (a *App) WebPermissionError403(w http.ResponseWriter, msg string) {
 
 func (a *App) WebError(w http.ResponseWriter, code int, msg string) {
 	type Page struct {
-		Title string
-		Code int
+		Title   string
+		Code    int
 		Message string
 	}
 	t := newTemplate(a.templateFS, "error.html")
 	err := t.ExecuteTemplate(w, "error.html", Page{
-		Title: fmt.Sprintf("HTTP Error %d", code),
-		Code:code,
-		Message:msg,
+		Title:   fmt.Sprintf("HTTP Error %d", code),
+		Code:    code,
+		Message: msg,
 	})
 	if err != nil {
 		log.Errorf("%s", err)
@@ -275,6 +276,9 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 			body.ArchivedBookmarks = append(body.ArchivedBookmarks, bb)
 		}
 	}
+
+	sort.Sort(account.SortedBookmarks(body.Bookmarks))
+	sort.Sort(account.SortedBookmarks(body.ArchivedBookmarks))
 	// log.Printf("bookmarks %#v", body.Bookmarks)
 
 	err = t.ExecuteTemplate(w, "profile.html", body)
@@ -291,7 +295,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	uid := a.User(r)
 
 	profileID := account.ProfileID(r.Form.Get("profile_id"))
-	logFields := log.Fields{"uid":uid, "profileID": profileID}
+	logFields := log.Fields{"uid": uid, "profileID": profileID}
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
@@ -388,7 +392,7 @@ func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
 
 	profileID := account.ProfileID(r.Form.Get("profile_id"))
 	body, legID := legislature.BodyID(r.Form.Get("body_id")), legislature.LegislationID(r.Form.Get("legislation_id"))
-	logFields := log.Fields{"uid":uid, "profileID": profileID, "body":body, "legislation_id":legID}
+	logFields := log.Fields{"uid": uid, "profileID": profileID, "body": body, "legislation_id": legID}
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
@@ -405,7 +409,6 @@ func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Permission Denied.", 403)
 		return
 	}
-
 
 	err = a.DeleteBookmark(ctx, profileID, body, legID)
 	if err != nil {
@@ -454,10 +457,10 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			app.NewSession(w, r)
 			return
 		}
-	case "DELETE": 
+	case "DELETE":
 		switch r.URL.Path {
 		case "/data/profile":
-			app.ProfileRemove(w,r )
+			app.ProfileRemove(w, r)
 			return
 		}
 	default:

@@ -57,6 +57,7 @@ type Body struct {
 	Name      string
 	Location  string // ex: New York
 	URL       string
+	Sort      func(a, b *Legislation) bool
 }
 
 type Resolver interface {
@@ -71,13 +72,24 @@ func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
 		if err != nil {
 			e = err
 			// try others first and defer last error till end
-			continue	
+			continue
 		}
 		if d != nil {
 			return d, nil
 		}
 	}
 	return nil, e
+}
+
+func GenericLegislationSort(a, b *Legislation) bool {
+	switch {
+	case a.Body != b.Body:
+		return a.Body < b.Body
+	case a.Session != b.Session:
+		return a.Session.StartYear < b.Session.StartYear
+	default:
+		return a.ID < b.ID
+	}
 }
 
 var ErrNotFound = errors.New("Not Found")

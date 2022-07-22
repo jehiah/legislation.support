@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
@@ -51,6 +52,21 @@ func NewNYAssembly(body legislature.Body, token string) *NYAssembly {
 	}
 }
 
+func LegislationSort(a, b *legislature.Legislation) bool {
+	switch {
+	case a.Body != b.Body:
+		return a.Body < b.Body
+	case a.Session != b.Session:
+		return a.Session.StartYear < b.Session.StartYear
+	case a.ID[5] != b.ID[5]:
+		return a.ID[5] < b.ID[5]
+	default:
+		aa, _ := strconv.Atoi(string(a.ID)[6:])
+		bb, _ := strconv.Atoi(string(b.ID)[6:])
+		return aa < bb
+	}
+}
+
 var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/amendment.*)?$")
 var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/amendment.*)?$")
 
@@ -73,6 +89,7 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 	}
 	return billToLegislation(bill, a.body.ID), nil
 }
+
 func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	var session, printNo string
 	switch u.Hostname() {
@@ -89,6 +106,9 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 			return nil, nil
 		}
 		session, printNo = u.Query().Get("term"), u.Query().Get("bn")
+	// TODO:
+	// https://legiscan.com/NY/bill/S0{number}/{year}
+	// i.e. https://legiscan.com/NY/bill/S01046/2021.json
 	default:
 		return nil, nil
 	}

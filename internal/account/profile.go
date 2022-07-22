@@ -23,6 +23,7 @@ type Profile struct {
 
 	// Colors?
 }
+
 func (p Profile) HasAccess(u UID) bool {
 	return p.UID == u
 }
@@ -55,6 +56,18 @@ func (b Bookmark) Key() string {
 
 func BookmarkKey(b legislature.BodyID, l legislature.LegislationID) string {
 	return string(b) + "." + string(l)
+}
+
+// SortedBookmarks implements sort.Interface
+type SortedBookmarks []Bookmark
+
+func (s SortedBookmarks) Len() int      { return len(s) }
+func (s SortedBookmarks) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s SortedBookmarks) Less(i, j int) bool {
+	if s[i].BodyID != s[j].BodyID {
+		return s[i].Body.Name < s[j].Body.Name
+	}
+	return s[i].Body.Sort(s[i].Legislation, s[j].Legislation)
 }
 
 func IsValidProfileID(s ProfileID) bool {
