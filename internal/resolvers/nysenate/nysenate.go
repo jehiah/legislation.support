@@ -15,7 +15,7 @@ import (
 )
 
 var Sessions = legislature.Sessions{
-	// {2023, 2024},
+	{2023, 2024},
 	{2021, 2022},
 	{2019, 2020},
 	{2017, 2018},
@@ -61,7 +61,7 @@ func LegislationSort(a, b *legislature.Legislation) bool {
 	case a.ID[5] != b.ID[5]:
 		return a.ID[5] < b.ID[5]
 	default:
-		aa, _ := strconv.Atoi(string(a.ID)[6:])
+		aa, _ := strconv.Atoi(string(a.ID)[6:]) // i.e 2020-S1234
 		bb, _ := strconv.Atoi(string(b.ID)[6:])
 		return aa < bb
 	}
@@ -124,6 +124,11 @@ func billToLegislation(bill *Bill, body legislature.BodyID) *legislature.Legisla
 		return nil
 	}
 	t, _ := time.Parse("2006-01-02T15:04:05", bill.PublishedDateTime)
+	session := Sessions.Find(bill.Session)
+	if session == (legislature.Session{}) {
+		log.Errorf("unable to find session %v", bill.Session)
+		return nil
+	}
 	return &legislature.Legislation{
 		ID:             legislature.LegislationID(fmt.Sprintf("%d-%s", bill.Session, bill.BasePrintNo)),
 		Body:           body,
@@ -131,7 +136,7 @@ func billToLegislation(bill *Bill, body legislature.BodyID) *legislature.Legisla
 		Title:          bill.Title,
 		Summary:        bill.Summary,
 		IntroducedDate: t,
-		Session:        Sessions.Find(bill.Session),
+		Session:        session,
 		URL:            fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
 	}
 }
