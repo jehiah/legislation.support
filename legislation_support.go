@@ -9,8 +9,10 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -42,6 +44,7 @@ type App struct {
 
 	staticHandler http.Handler
 	templateFS    fs.FS
+	firebaseAuth  http.Handler
 }
 
 func commaInt(i int) string {
@@ -88,10 +91,11 @@ type BillBody struct {
 func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	type Page struct {
-		Page  string
-		Title string
-		UID   account.UID
-		Bills []BillBody
+		Page       string
+		Title      string
+		UID        account.UID
+		Bills      []BillBody
+		AuthDomain string
 	}
 
 	var bills []legislature.Legislation
@@ -107,7 +111,11 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := Page{
-		Title: "legislation.support",
+		Title:      "legislation.support",
+		AuthDomain: "legislation.support",
+	}
+	if a.devMode {
+		body.AuthDomain = "dev.legislation.support"
 	}
 
 	for _, b := range bills {
@@ -421,6 +429,13 @@ func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
+	if strings.HasPrefix(r.URL.Path, "/__/auth") {
+		// reverse proxy for signin-helpers for popup/redirect sign in
+		// for Safari/iOS
+		app.firebaseAuth.ServeHTTP(w, r)
+		return
+	}
 	switch r.Method {
 	case "GET":
 		switch r.URL.Path {
@@ -498,13 +513,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	firebase := &url.URL{Scheme: "https", Host: "legislation-support.firebaseapp.com"}
 	app := &App{
 		devMode:       *devMode,
 		firestore:     createClient(ctx),
 		firebase:      authClient,
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
+		firebaseAuth: &httputil.ReverseProxy{
+			Rewrite: func(r *httputil.ProxyRequest) {
+				r.SetXForwarded()
+				r.SetURL(firebase)
+			},
+		},
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")
@@ -514,7 +535,11 @@ func main() {
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8081"
+		if *devMode {
+			port = "443"
+		} else {
+			port = "8081"
+		}
 	}
 
 	var h http.Handler = app
@@ -523,8 +548,30 @@ func main() {
 	}
 
 	// Start HTTP server.
-	log.Printf("listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, h); err != nil {
-		log.Fatal(err)
+
+	if *devMode {
+		// mkcert -key-file dev/key.pem -cert-file dev/cert.pem dev.legislation.support
+		if _, err := os.Stat("dev/cert.pem"); os.IsNotExist(err) {
+			log.Printf("dev/cert.pem missing.")
+			os.Mkdir("dev", 0750)
+			cmd := exec.Command("mkcert", "-install", "-key-file=dev/key.pem", "-cert-file=dev/cert.pem", "dev.legislation.support")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			log.Printf("%s %s", cmd.Path, strings.Join(cmd.Args[1:], " "))
+			err := cmd.Run()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		log.Printf("listening to HTTPS on port %s", port)
+		if err := http.ListenAndServeTLS(":"+port, "dev/cert.pem", "dev/key.pem", h); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Printf("listening on port %s", port)
+		if err := http.ListenAndServe(":"+port, h); err != nil {
+			log.Fatal(err)
+		}
 	}
+
 }
