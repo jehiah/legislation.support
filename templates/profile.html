@@ -48,9 +48,9 @@
 <h2 class="profile-name">{{.Profile.Name}}</h2>
 </div>
 
-<div class="row">
+<!-- <div class="row">
   <p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
-</div>
+</div> -->
 
 {{if .EditMode}}
 
@@ -101,24 +101,15 @@
 </div>
 {{end}}
 
+{{if .Bookmarks}}
+<div class="row">
+  <p>{{len .Bookmarks}} supported bills in current legislative sessions.</p>
+</div>
+{{end}}
+
 {{range .Bookmarks}}
   <div class="row bookmark">
     <div class="row1">
-
-      <!--
-      <div class="dropdown float-end">
-        <button class="btn btn-secondary dropdown-toggle" type="button" id="action-dropdown-{{.Key}}" data-bs-toggle="dropdown" aria-expanded="false">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
-            <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-          </svg>
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="action-dropdown-{{.Key}}">
-          <li><a class="dropdown-item" href="#">Edit</a></li>
-          <li><a class="dropdown-item" href="#">Refresh</a></li>
-          <li><a class="dropdown-item" href="#">Remove</a></li>
-        </ul>
-      </div>
-    -->
 
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
     <div class="legislation-title">{{.Legislation.Title}}</div>
@@ -139,12 +130,16 @@
 {{end}}
 
 {{if .ArchivedBookmarks }}
-<div class="row mt-5">
+<div class="row mt-5" id="show-archived">
   <h3>Archived</h3>
-  <p>Legislation from past sessions</p>
+  <p><a href="" onclick="document.getElementById('archived').style.display='block'; document.getElementById('show-archived').style.display='none'; return false; ">See {{len .ArchivedBookmarks}} saved bills from past legislative sessions</a></p>
 </div>
 {{end}}
-{{range .ArchivedBookmarks}}
+<div id="archived" style="display: none;">
+  <div class="row mt-5">
+    <h3>Archived</h3>
+  </div>
+  {{range .ArchivedBookmarks}}
   <div class="row bookmark">
     <div class="row1">
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
@@ -164,5 +159,6 @@
     </div>
   </div>
 {{end}}
+</div>
 
 {{end}}
