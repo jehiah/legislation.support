@@ -111,7 +111,7 @@ th > .legislation-title {
     {{end}}
   </tr>
   <tr>
-    <th>Council Member</th>
+    <th data-sortInitialOrder="asc">Council Member</th>
     <th>% Correct</th>
     {{range .Columns}}
     <th class="percent-correct" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
@@ -142,7 +142,7 @@ th > .legislation-title {
 <script type="module">
 import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
 $("#data-table").tablesorter({
-  sortList:[[2,1]],
+  sortList:[[1,1],[0,0]],
   theme: "bootstrap",
   sortInitialOrder:"desc",
   sortRestart: true
