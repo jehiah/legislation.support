@@ -456,6 +456,14 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			app.staticHandler.ServeHTTP(w, r)
 			return
 		}
+		if strings.HasSuffix(r.URL.Path, "/scorecard") {
+			s := strings.TrimSuffix(r.URL.Path, "/scorecard")
+			if p := account.ProfileID(strings.TrimPrefix(s, "/")); account.IsValidProfileID(p) {
+				app.Scorecard(w, r, p)
+				return
+			}
+		}
+
 		if p := account.ProfileID(strings.TrimPrefix(r.URL.Path, "/")); account.IsValidProfileID(p) {
 			app.Profile(w, r, p)
 			return

@@ -33,6 +33,8 @@ type NYSenate struct {
 	api  *NYSenateAPI
 }
 
+func (n NYSenate) Body() legislature.Body { return n.body }
+
 func NewNYSenate(body legislature.Body, token string) *NYSenate {
 	return &NYSenate{
 		body: body,
@@ -44,6 +46,8 @@ type NYAssembly struct {
 	body legislature.Body
 	api  *NYSenateAPI
 }
+
+func (n NYAssembly) Body() legislature.Body { return n.body }
 
 func NewNYAssembly(body legislature.Body, token string) *NYAssembly {
 	return &NYAssembly{
@@ -159,8 +163,9 @@ func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bil
 		return nil, nil
 	}
 	params := &url.Values{"key": []string{a.token}, "view": []string{"with_refs"}}
-	u := apiDomain + fmt.Sprintf("/api/3/bills/%s/%s?", url.PathEscape(session), url.PathEscape(printNo)) + params.Encode()
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	u := apiDomain + fmt.Sprintf("/api/3/bills/%s/%s?", url.PathEscape(session), url.PathEscape(printNo))
+	log.WithContext(ctx).WithField("nysenate_api", u).Info("looking up bill")
+	req, err := http.NewRequestWithContext(ctx, "GET", u+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}

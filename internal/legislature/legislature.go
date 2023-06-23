@@ -62,8 +62,18 @@ type Body struct {
 
 type Resolver interface {
 	Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
+	Body() Body
 }
 type Resolvers []Resolver
+
+func (r Resolvers) Find(ID BodyID) Resolver {
+	for _, rr := range r {
+		if rr.Body().ID == ID {
+			return rr
+		}
+	}
+	return nil
+}
 
 func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error) {
 	var e error

@@ -28,12 +28,14 @@ var Sessions = legislature.Sessions{
 // var CurrentSession = Sessions.Current()
 
 type NYC struct {
-	Body legislature.Body
+	body legislature.Body
 }
 
 func New(b legislature.Body) *NYC {
-	return &NYC{Body: b}
+	return &NYC{body: b}
 }
+
+func (n NYC) Body() legislature.Body { return n.body }
 
 var introPattern = regexp.MustCompile("/[0-9]{1,4}-20[12][0-9]$")
 
@@ -67,12 +69,32 @@ func (n NYC) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, 
 	return nil, nil
 }
 
+func (n NYC) Raw(ctx context.Context, l *legislature.Legislation) (*db.Legislation, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/" + strings.TrimPrefix(string(l.ID), "Int "),
+	}
+	return n.IntroJSON(ctx, u.String())
+}
+
+func (n NYC) ActivePeople(ctx context.Context) ([]db.Person, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/data/people_active.json",
+	}
+	var people []db.Person
+	err := n.get(ctx, u.String(), &people)
+	return people, err
+}
+
 func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 	if d == nil {
 		return nil
 	}
 	return &legislature.Legislation{
-		Body:           n.Body.ID,
+		Body:           n.body.ID,
 		ID:             legislature.LegislationID(strings.TrimPrefix(d.File, "Int ")),
 		DisplayID:      d.File,
 		Title:          d.Name,
@@ -84,25 +106,33 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 	}
 }
 
-func (n NYC) IntroJSON(ctx context.Context, u string) (*db.Legislation, error) {
-	r, err := http.NewRequestWithContext(ctx, "GET", u+".json", nil)
+func (n NYC) get(ctx context.Context, u string, v interface{}) error {
+	r, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		log.Printf("GET %s %s", r.URL.String(), err)
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 	log.Printf("%d GET %s", resp.StatusCode, r.URL.String())
 	if resp.StatusCode == 404 {
-		return nil, nil
+		v = nil
+		return nil
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("got http %d", resp.StatusCode)
+		return fmt.Errorf("got http %d", resp.StatusCode)
 	}
+	return json.NewDecoder(resp.Body).Decode(&v)
+}
+
+func (n NYC) IntroJSON(ctx context.Context, u string) (*db.Legislation, error) {
 	var d db.Legislation
-	err = json.NewDecoder(resp.Body).Decode(&d)
+	err := n.get(ctx, u+".json", &d)
+	if err != nil {
+		return nil, err
+	}
 	return &d, err
 }
