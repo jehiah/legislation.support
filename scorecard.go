@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/resolvers"
@@ -10,6 +11,16 @@ import (
 	"github.com/jehiah/legislator/db"
 	log "github.com/sirupsen/logrus"
 )
+
+type Score struct {
+	Score   int
+	Status  string
+	Desired int
+}
+
+func (s Score) CSS() string {
+	return strings.ToLower(s.Status)
+}
 
 // Scorecard builds a scorecard for the tracked bills
 func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID account.ProfileID) {
@@ -31,12 +42,6 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 	if uid == "" && profile.Private {
 		a.WebPermissionError403(w, "")
 		return
-	}
-
-	type Score struct {
-		Score  int
-		Status string
-		Text   string
 	}
 
 	type Column struct {
@@ -81,6 +86,19 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		a.WebInternalError500(w, err.Error())
 		return
 	}
+	// data cleanup
+	for i, p := range body.People {
+		body.People[i].FullName = strings.TrimSpace(p.FullName)
+	}
+
+	// remove the public advocate
+	for i, p := range body.People {
+		switch p.ID {
+		case 7780: // public advocate
+			body.People = append(body.People[:i], body.People[i+1:]...)
+			break
+		}
+	}
 
 	sort.Sort(account.SortedBookmarks(body.Bookmarks))
 	for _, l := range body.Bookmarks {
@@ -91,17 +109,18 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		}
 		scores := make(map[string]string)
 		for _, sponsor := range raw.Sponsors {
-			scores[sponsor.FullName] = "Sponsor"
+			scores[strings.TrimSpace(sponsor.FullName)] = "Sponsor"
 		}
 		for _, h := range raw.History {
 			for _, v := range h.Votes {
-				scores[v.FullName] = v.Vote
+				scores[strings.TrimSpace(v.FullName)] = v.Vote
 			}
 		}
 		c := Column{
 			Legislation: raw,
 			Bookmark:    l,
 		}
+		// TODO: determine if we desire yes/now
 		for _, p := range body.People {
 			c.Scores = append(c.Scores, Score{Status: scores[p.FullName]})
 		}

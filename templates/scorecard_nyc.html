@@ -39,6 +39,27 @@
   color: var(--grey-dark);
   border-left: solid 4px var(--grey-light-2);
 }
+.table-condensed>:not(caption)>*>* {
+	padding: 0.5rem 0;
+}
+td.score {
+  font-size:10px;
+  background-color: orange;
+  text-align: center;
+  border: 1px solid #333;
+}
+td.sponsor {
+  background-color: #0f0;
+}
+td.affirmative {
+  background-color: #0f0;
+}
+td.negative {
+  background-color: #f00;
+}
+td.absent {
+  background-color: #bbb;
+}
 </style>
 {{end}}
 {{define "middle"}}
@@ -57,7 +78,7 @@
 
 
 <div class="row">
-  <table class="table table-xs">
+  <table class="table table-sm table-condensed">
 <thead>
   <tr>
     <th>Council Member</th>
@@ -72,7 +93,7 @@
 <tr>
   <th>{{$p.FullName}}</th>
   {{range $.Columns}}
-    <td>{{(index .Scores $i).Status}}</td>
+    <td class="score {{(index .Scores $i).CSS}} ">{{(index .Scores $i).Status}}</td>
   {{end}}
 </tr>
 {{end}}
