@@ -13,13 +13,60 @@ import (
 )
 
 type Score struct {
-	Score   int
+	// Score   int
 	Status  string
-	Desired int
+	Desired bool
+}
+
+func (s Score) Score() int {
+	if s.Desired {
+		switch strings.ToLower(s.Status) {
+		case "affirmative", "sponsor":
+			return 1
+		case "negative":
+			return -1
+		}
+		return 0
+	}
+	switch strings.ToLower(s.Status) {
+	case "affirmative", "sponsor":
+		return -1
+	case "negative":
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (s Score) CSS() string {
 	return strings.ToLower(s.Status)
+}
+
+type Column struct {
+	Legislation *db.Legislation
+	Bookmark    account.Bookmark
+	Scores      []Score
+}
+type Columns []Column
+
+func (c Column) PercentCorrect() float64 {
+	have := 0
+	for _, s := range c.Scores {
+		if s.Score() == 1 {
+			have++
+		}
+	}
+	return (float64(have) / float64(len(c.Scores))) * 100
+}
+
+func (c Columns) PercentCorrect(idx int) float64 {
+	have := 0
+	for _, cc := range c {
+		if cc.Scores[idx].Score() == 1 {
+			have++
+		}
+	}
+	return (float64(have) / float64(len(c))) * 100
 }
 
 // Scorecard builds a scorecard for the tracked bills
@@ -44,12 +91,6 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		return
 	}
 
-	type Column struct {
-		Legislation *db.Legislation
-		Bookmark    account.Bookmark
-		Scores      []Score
-	}
-
 	type Page struct {
 		Page      string
 		Title     string
@@ -58,7 +99,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		EditMode  bool
 		Bookmarks []account.Bookmark
 		People    []db.Person
-		Columns   []Column
+		Columns   Columns
 	}
 	body := Page{
 		Title:    profile.Name + " scorecard (legislation.support)",
@@ -122,7 +163,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		}
 		// TODO: determine if we desire yes/now
 		for _, p := range body.People {
-			c.Scores = append(c.Scores, Score{Status: scores[p.FullName]})
+			c.Scores = append(c.Scores, Score{Status: scores[p.FullName], Desired: true})
 		}
 		body.Columns = append(body.Columns, c)
 	}

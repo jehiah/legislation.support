@@ -2,6 +2,7 @@
 {{define "title"}}{{.Title}}{{end}}
 {{define "head"}}
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.bootstrap_4.min.css" integrity="sha512-2C6AmJKgt4B+bQc08/TwUeFKkq8CsBNlTaNcNgUmsDJSU1Fg+R6azDbho+ZzuxEkJnCjLZQMozSq3y97ZmgwjA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
 .profile-name {
   border-bottom: 1px solid var(--brand);
@@ -12,11 +13,12 @@
   padding-top: .5rem;
 }
 .legislation-id {
-  display: inline-block;
+  /* display: inline-block; */
+  white-space: nowrap;
 }
 .legislation-title {
-  display: inline-block;
-  font-weight: 600;
+  /* display: inline-block; */
+  /* font-weight: 600; */
 }
 .legislation-id a:link {
   color: var(--brand-dark);
@@ -60,6 +62,20 @@ td.negative {
 td.absent {
   background-color: #bbb;
 }
+th > .legislation-title {
+    font-size: 10px;
+    line-height: 9px;
+    font-weight: 200;
+}
+.percent-correct {
+  text-align: center;
+  font-size:11px;
+  font-weight: 700;
+}
+.tablesorter-bootstrap .tablesorter-header-inner {
+  padding: 2px 18px 2px 2px;
+}
+
 </style>
 {{end}}
 {{define "middle"}}
@@ -78,12 +94,27 @@ td.absent {
 
 
 <div class="row">
-  <table class="table table-sm table-condensed">
+  <table class="table table-sm table-condensed" id="data-table">
 <thead>
+  <tr class="tablesorter-ignoreRow">
+    <th></th>
+    <th></th>
+    {{range .Columns}}
+    <th><div class="legislation-id"><a href="{{.Bookmark.Legislation.URL}}">{{.Bookmark.Legislation.ID}}</a></div></th>
+    {{end}}
+  </tr>
+  <tr class="tablesorter-ignoreRow">
+    <th></th>
+    <th>Total Score</th>
+    {{range .Columns}}
+    <th><div class="legislation-title">{{.Bookmark.Legislation.Title}}</div></th>
+    {{end}}
+  </tr>
   <tr>
     <th>Council Member</th>
+    <th>% Correct</th>
     {{range .Columns}}
-    <th><div class="legislation-id"><a href="{{.Bookmark.Legislation.URL}}">{{.Bookmark.Legislation.DisplayID}}</a></div></th>
+    <th class="percent-correct" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
     {{end}}
   </tr>
 </thead>
@@ -92,8 +123,9 @@ td.absent {
 {{range $i, $p := .People}} 
 <tr>
   <th>{{$p.FullName}}</th>
+  <td class="percent-correct" data-percent="{{printf "%0.1f%%" ($.Columns.PercentCorrect $i) }}">{{printf "%0.1f%%" ($.Columns.PercentCorrect $i) }}</td>
   {{range $.Columns}}
-    <td class="score {{(index .Scores $i).CSS}} ">{{(index .Scores $i).Status}}</td>
+    <td class="score {{(index .Scores $i).CSS}} " data-text="{{(index .Scores $i).Score}}">{{(index .Scores $i).Status}}</td>
   {{end}}
 </tr>
 {{end}}
@@ -101,5 +133,26 @@ td.absent {
 </tbody>
 </table>
 </div>
+
+{{end}}
+
+{{define "javascript"}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="module">
+import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
+$("#data-table").tablesorter({
+  sortList:[[2,1]],
+  theme: "bootstrap",
+  sortInitialOrder:"desc",
+  sortRestart: true
+});
+
+// const color1 = scaleLinear().domain([0,100]).range(["#f9f7fb", "#9996c6"]) // purple
+const color1 = scaleLinear().domain([0,100]).range(["#ffeeff", "#ff00ff"]) // purple
+Array.from(document.getElementsByClassName("percent-correct")).forEach(e => {
+  e.style.backgroundColor = color1(parseFloat(e.dataset.percent))
+});
+</script>
 
 {{end}}
