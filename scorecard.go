@@ -58,10 +58,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 
 	if body == "" {
 		// redirect to a more specific URL
-		bodies := make(map[legislature.BodyID]bool)
-		for _, bb := range b {
-			bodies[bb.Legislation.Body] = true
-		}
+		bodies := b.Bodies()
 		if len(bodies) == 0 {
 			http.Error(w, "Not Found", 404)
 			return
@@ -72,14 +69,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		}
 	}
 
-	var bookmarks []account.Bookmark
-	for _, bb := range b {
-		if bb.Legislation.Session.Active() {
-			if bb.Legislation.Body == body {
-				bookmarks = append(bookmarks, bb)
-			}
-		}
-	}
+	bookmarks := b.Active().Filter(body)
 
 	sort.Sort(account.SortedBookmarks(bookmarks))
 	var scorable []legislature.Scorable

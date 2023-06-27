@@ -49,6 +49,39 @@ type Bookmark struct {
 	Body        *legislature.Body        `firestore:"-"`
 	Legislation *legislature.Legislation `firestore:"-"`
 }
+type Bookmarks []Bookmark
+
+func (b Bookmarks) Filter(body legislature.BodyID) Bookmarks {
+	var out Bookmarks
+	for _, bb := range b {
+		if bb.BodyID == body {
+			out = append(out, bb)
+		}
+	}
+	return out
+}
+
+func (b Bookmarks) Active() Bookmarks {
+	var out Bookmarks
+	for _, bb := range b {
+		if bb.Legislation.Session.Active() {
+			out = append(out, bb)
+		}
+	}
+	return out
+}
+
+func (b Bookmarks) Bodies() []legislature.BodyID {
+	l := make(map[legislature.BodyID]bool)
+	for _, bb := range b {
+		l[bb.BodyID] = true
+	}
+	var bodies []legislature.BodyID
+	for body, _ := range l {
+		bodies = append(bodies, body)
+	}
+	return bodies
+}
 
 func (b Bookmark) NewScore() legislature.ScoredBookmark {
 	return legislature.ScoredBookmark{

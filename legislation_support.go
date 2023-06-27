@@ -262,8 +262,8 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 		UID               account.UID
 		Profile           account.Profile
 		EditMode          bool
-		Bookmarks         []account.Bookmark
-		ArchivedBookmarks []account.Bookmark
+		Bookmarks         account.Bookmarks
+		ArchivedBookmarks account.Bookmarks
 	}
 	body := Page{
 		Title:    profile.Name + " (legislation.support)",

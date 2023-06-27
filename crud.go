@@ -193,8 +193,8 @@ func (a *App) GetBill(ctx context.Context, body legislature.BodyID, id legislatu
 // func (a *App) GetProfileBills(ctx context.Context, profileID string) ([]legislature.Legislation, error) {
 // }
 
-func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.ProfileID) ([]account.Bookmark, error) {
-	var out []account.Bookmark
+func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.ProfileID) (account.Bookmarks, error) {
+	var out account.Bookmarks
 	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
 	iter := query.Documents(ctx)
 	defer iter.Stop()

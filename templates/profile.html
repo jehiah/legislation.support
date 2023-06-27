@@ -102,10 +102,20 @@
 {{end}}
 
 {{if .Bookmarks}}
+
+{{if ge (len .Bookmarks.Bodies) 1}}
+
+<div class="float-end">
+  Scorecard: {{range $i, $b := .Bookmarks.Bodies}}{{if ge $i 1}},{{end}} <a href="/{{$.Profile.ID}}/scorecard/{{.}}">{{.}}</a>{{end}}
+</div>
+
+{{end}}
+
 <div class="row">
   <p>{{len .Bookmarks}} supported bills in current legislative sessions.</p>
 </div>
 {{end}}
+
 
 {{range .Bookmarks}}
   <div class="row bookmark">
