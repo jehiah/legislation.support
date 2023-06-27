@@ -63,6 +63,9 @@ func (s Score) CSS() string {
 }
 
 func (c ScoredBookmark) PercentCorrect() float64 {
+	if len(c.Scores) == 0 {
+		return 0
+	}
 	have := 0
 	for _, s := range c.Scores {
 		if s.Score() == 1 {
@@ -73,6 +76,9 @@ func (c ScoredBookmark) PercentCorrect() float64 {
 }
 
 func (c Scorecard) PercentCorrect(idx int) float64 {
+	if len(c.Data) == 0 {
+		return 0
+	}
 	have := 0
 	for _, cc := range c.Data {
 		if cc.Scores[idx].Score() == 1 {

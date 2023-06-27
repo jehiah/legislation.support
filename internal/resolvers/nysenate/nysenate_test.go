@@ -19,6 +19,24 @@ func TestGetBill(t *testing.T) {
 	t.Logf("%#v", b)
 }
 
+func TestGetMembers(t *testing.T) {
+	a := NewAPI(os.Getenv("NY_SENATE_TOKEN"))
+	m, err := a.GetMembers(context.Background(), "2023", "senate")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%#v", m)
+	found := false
+	for _, s := range m {
+		if s.ShortName == "HOYLMAN-SIGAL" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected HOYLMAN-SIGAL")
+	}
+}
+
 func TestNYSenateLookup(t *testing.T) {
 
 	type testCase struct {

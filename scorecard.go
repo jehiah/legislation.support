@@ -13,7 +13,7 @@ import (
 
 // Scorecard builds a scorecard for the tracked bills
 func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID account.ProfileID, body legislature.BodyID) {
-	t := newTemplate(a.templateFS, "scorecard_nyc.html")
+	t := newTemplate(a.templateFS, "scorecard.html")
 	ctx := r.Context()
 	uid := a.User(r)
 	fields := log.Fields{"uid": uid, "profileID": profileID, "body": body}
@@ -85,7 +85,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 
 	// log.Printf("bookmarks %#v", body.Bookmarks)
 
-	err = t.ExecuteTemplate(w, "scorecard_nyc.html", pageBody)
+	err = t.ExecuteTemplate(w, "scorecard.html", pageBody)
 	if err != nil {
 		log.WithFields(fields).Error(err)
 		a.WebInternalError500(w, "")
