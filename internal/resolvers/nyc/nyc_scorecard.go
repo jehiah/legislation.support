@@ -6,6 +6,7 @@ import (
 
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislator/db"
+	"golang.org/x/sync/errgroup"
 )
 
 func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*legislature.Scorecard, error) {
@@ -13,6 +14,7 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 		Metadata: legislature.ScorecardMetadata{
 			PersonTitle: "Council Member",
 		},
+		Data: make([]legislature.ScoredBookmark, len(bookmarks)),
 	}
 
 	var people []db.Person
@@ -34,28 +36,33 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 		people = append(people, p)
 	}
 
-	// TODO: lookup in a goroutine
-	for _, b := range bookmarks {
-		sb := b.NewScore()
+	// TODO: cap concurency
+	g := new(errgroup.Group)
+	for i, b := range bookmarks {
+		i, b := i, b
 
-		raw, err := a.Raw(ctx, sb.Legislation)
-		if err != nil {
-			return s, err
-		}
-		scores := make(map[string]string)
-		for _, sponsor := range raw.Sponsors {
-			scores[strings.TrimSpace(sponsor.FullName)] = "Sponsor"
-		}
-		for _, h := range raw.History {
-			for _, v := range h.Votes {
-				scores[strings.TrimSpace(v.FullName)] = v.Vote
+		g.Go(func() error {
+			sb := b.NewScore()
+			raw, err := a.Raw(ctx, sb.Legislation)
+			if err != nil {
+				return err
 			}
-		}
+			scores := make(map[string]string)
+			for _, sponsor := range raw.Sponsors {
+				scores[strings.TrimSpace(sponsor.FullName)] = "Sponsor"
+			}
+			for _, h := range raw.History {
+				for _, v := range h.Votes {
+					scores[strings.TrimSpace(v.FullName)] = v.Vote
+				}
+			}
 
-		for _, p := range s.People {
-			sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.FullName], Desired: !sb.Oppose})
-		}
-		s.Data = append(s.Data, sb)
+			for _, p := range s.People {
+				sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.FullName], Desired: !sb.Oppose})
+			}
+			s.Data[i] = sb
+			return nil
+		})
 	}
-	return s, nil
+	return s, g.Wait()
 }
