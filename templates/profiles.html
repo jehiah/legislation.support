@@ -21,7 +21,7 @@
 {{end}}
 
 
-{{if le (len .Profiles) 10}}
+{{if le (len .Profiles) 3}}
 
 <h2>{{if not .Profiles }}First: {{end}}Create a Legislation Profile</h2>
 
@@ -31,7 +31,7 @@
   <input type="hidden" name="id" id="id">
   <div class="mb-3">
     <label for="profile">Profile Name</label>
-    <input type="text" name="name" id="profile-name" placeholder="Jane Citizen">
+    <input type="text" name="name" id="profile-name" placeholder="Jane Citizen's Legislation">
   </div>
 
   <p class="preview">Your profile will be available at <code>https://legislation.support/<span id="preview-profile">jane-citizen</span></code></p>

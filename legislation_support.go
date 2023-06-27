@@ -456,11 +456,21 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			app.staticHandler.ServeHTTP(w, r)
 			return
 		}
-		if strings.HasSuffix(r.URL.Path, "/scorecard") {
-			s := strings.TrimSuffix(r.URL.Path, "/scorecard")
-			if p := account.ProfileID(strings.TrimPrefix(s, "/")); account.IsValidProfileID(p) {
-				app.Scorecard(w, r, p)
-				return
+		if strings.HasSuffix(r.URL.Path, "/scorecard") || strings.Contains(r.URL.Path, "/scorecard/") {
+			s := strings.Split(r.URL.Path, "/")
+			// /$profile/scorecard or /$profile/scorecard/$bodyID
+			if p := account.ProfileID(s[1]); account.IsValidProfileID(p) {
+				var b legislature.BodyID
+				if len(s) == 3 {
+					app.Scorecard(w, r, p, b)
+					return
+				} else if len(s) == 4 && resolvers.IsValidBodyID(legislature.BodyID(s[3])) {
+					b = legislature.BodyID(s[3])
+					if resolvers.IsValidBodyID(b) {
+						app.Scorecard(w, r, p, b)
+						return
+					}
+				}
 			}
 		}
 

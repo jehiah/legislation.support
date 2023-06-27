@@ -50,6 +50,14 @@ type Bookmark struct {
 	Legislation *legislature.Legislation `firestore:"-"`
 }
 
+func (b Bookmark) NewScore() legislature.ScoredBookmark {
+	return legislature.ScoredBookmark{
+		Legislation: b.Legislation,
+		Oppose:      b.Oppose,
+		// Tags: b.Tags,
+	}
+}
+
 func (b Bookmark) Key() string {
 	return string(b.BodyID) + "." + string(b.LegislationID)
 }

@@ -46,3 +46,8 @@ var Bodies map[legislature.BodyID]legislature.Body = map[legislature.BodyID]legi
 	NYSenate.ID:   NYSenate,
 	NYAssembly.ID: NYAssembly,
 }
+
+func IsValidBodyID(ID legislature.BodyID) bool {
+	_, ok := Bodies[ID]
+	return ok
+}

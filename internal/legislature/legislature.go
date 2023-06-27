@@ -63,6 +63,7 @@ type Body struct {
 type Resolver interface {
 	Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
 	Body() Body
+	Scorecard(context.Context, []Scorable) (*Scorecard, error)
 }
 type Resolvers []Resolver
 

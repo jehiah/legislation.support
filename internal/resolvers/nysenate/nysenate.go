@@ -71,6 +71,14 @@ func LegislationSort(a, b *legislature.Legislation) bool {
 	}
 }
 
+func (a NYSenate) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*legislature.Scorecard, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (a NYAssembly) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*legislature.Scorecard, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/amendment.*)?$")
 var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/amendment.*)?$")
 

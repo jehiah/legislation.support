@@ -42,7 +42,7 @@
   border-left: solid 4px var(--grey-light-2);
 }
 .table-condensed>:not(caption)>*>* {
-	padding: 0.5rem 0;
+	padding: 2px 0;
 }
 td.score {
   font-size:10px;
@@ -59,22 +59,42 @@ td.affirmative {
 td.negative {
   background-color: #f00;
 }
-td.absent {
+td.absent, td.maternity {
   background-color: #bbb;
 }
 th > .legislation-title {
     font-size: 10px;
-    line-height: 9px;
+    line-height: 10px;
     font-weight: 200;
+    font-family: Georgia, "New York", "Times New Roman", Times, serif;
 }
 .percent-correct {
   text-align: center;
-  font-size:11px;
-  font-weight: 700;
+  /* font-size:11px; */
+  /* font-weight: 700; */
+  font-size: .8rem;
+  font-weight: bold;
 }
+.tablesorter-bootstrap tfoot td, .tablesorter-bootstrap tfoot th, .tablesorter-bootstrap thead td, .tablesorter-bootstrap thead th {
+  font: .8rem var(--bs-font-sans-serif);
+}
+tbody th {
+  font: .8rem var(--bs-font-sans-serif);
+}
+
 .tablesorter-bootstrap .tablesorter-header-inner {
-  padding: 2px 18px 2px 2px;
+  padding: 0 18px 0 0;
 }
+td.number, th.number {
+  padding-right:.25rem;
+  text-align: right;
+  font-family: var(--bs-font-monospace);
+}
+th.full-name {
+  white-space: nowrap;
+  padding-left:4px
+}
+
 
 </style>
 {{end}}
@@ -86,35 +106,35 @@ th > .legislation-title {
 </div>
 
 
-{{if not .Bookmarks }}
+{{if not .Scorecard.Data }}
 <div class="row">
 <p>No legislation</p>
 </div>
 {{end}}
 
-
+{{with $S := .Scorecard }}
 <div class="row">
   <table class="table table-sm table-condensed" id="data-table">
 <thead>
   <tr class="tablesorter-ignoreRow">
     <th></th>
     <th></th>
-    {{range .Columns}}
-    <th><div class="legislation-id"><a href="{{.Bookmark.Legislation.URL}}">{{.Bookmark.Legislation.ID}}</a></div></th>
+    {{range .Data}}
+    <th><div class="legislation-title">{{.Legislation.Title}}</div></th>
     {{end}}
   </tr>
   <tr class="tablesorter-ignoreRow">
     <th></th>
-    <th>Total Score</th>
-    {{range .Columns}}
-    <th><div class="legislation-title">{{.Bookmark.Legislation.Title}}</div></th>
+    <th></th>
+    {{range .Data}}
+    <th><div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.ID}}</a></div></th>
     {{end}}
   </tr>
   <tr>
-    <th data-sortInitialOrder="asc">Council Member</th>
-    <th>% Correct</th>
-    {{range .Columns}}
-    <th class="percent-correct" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
+    <th data-sortInitialOrder="asc" class="text-nowrap">{{.Metadata.PersonTitle}}</th>
+    <th class="text-nowrap">% Correct</th>
+    {{range .Data}}
+    <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
     {{end}}
   </tr>
 </thead>
@@ -122,9 +142,9 @@ th > .legislation-title {
 
 {{range $i, $p := .People}} 
 <tr>
-  <th>{{$p.FullName}}</th>
-  <td class="percent-correct" data-percent="{{printf "%0.1f%%" ($.Columns.PercentCorrect $i) }}">{{printf "%0.1f%%" ($.Columns.PercentCorrect $i) }}</td>
-  {{range $.Columns}}
+  <th class="full-name">{{$p.FullName}}</th>
+  <td class="percent-correct number" data-percent="{{printf "%0.1f%%" ($S.PercentCorrect $i) }}">{{printf "%0.1f%%" ($S.PercentCorrect $i) }}</td>
+  {{range $S.Data}}
     <td class="score {{(index .Scores $i).CSS}} " data-text="{{(index .Scores $i).Score}}">{{(index .Scores $i).Status}}</td>
   {{end}}
 </tr>
@@ -132,6 +152,8 @@ th > .legislation-title {
 
 </tbody>
 </table>
+{{ end }}
+
 </div>
 
 {{end}}
