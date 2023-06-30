@@ -127,7 +127,14 @@ th.full-name {
     <th></th>
     <th></th>
     {{range .Data}}
-    <th><div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.ID}}</a></div></th>
+    <th><div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div></th>
+    {{end}}
+  </tr>
+  <tr class="tablesorter-ignoreRow">
+    <th></th>
+    <th></th>
+    {{range .Data}}
+    <th><div class="status">{{.Status}}</div></th>
     {{end}}
   </tr>
   <tr>

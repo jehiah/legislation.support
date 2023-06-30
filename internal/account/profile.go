@@ -51,11 +51,15 @@ type Bookmark struct {
 }
 type Bookmarks []Bookmark
 
-func (b Bookmarks) Filter(body legislature.BodyID) Bookmarks {
+// Filter includes items that match any of the selected bodies
+func (b Bookmarks) Filter(body ...legislature.BodyID) Bookmarks {
 	var out Bookmarks
 	for _, bb := range b {
-		if bb.BodyID == body {
-			out = append(out, bb)
+		for _, target := range body {
+			if bb.BodyID == target {
+				out = append(out, bb)
+				break
+			}
 		}
 	}
 	return out

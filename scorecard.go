@@ -12,11 +12,11 @@ import (
 )
 
 // Scorecard builds a scorecard for the tracked bills
-func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID account.ProfileID, body legislature.BodyID) {
+func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID account.ProfileID, bodyID legislature.BodyID) {
 	t := newTemplate(a.templateFS, "scorecard.html")
 	ctx := r.Context()
 	uid := a.User(r)
-	fields := log.Fields{"uid": uid, "profileID": profileID, "body": body}
+	fields := log.Fields{"uid": uid, "profileID": profileID, "body": bodyID}
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
@@ -56,27 +56,32 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		return
 	}
 
-	if body == "" {
+	if bodyID == "" {
 		// redirect to a more specific URL
 		bodies := b.Bodies()
 		if len(bodies) == 0 {
 			http.Error(w, "Not Found", 404)
 			return
 		}
-		for bb, _ := range bodies {
-			http.Redirect(w, r, fmt.Sprintf("/%s/scorecard/%s", profileID, bb), 302)
-			return
-		}
+		http.Redirect(w, r, fmt.Sprintf("/%s/scorecard/%s", profileID, bodies[0]), 302)
+		return
+	}
+	body, ok := resolvers.Bodies[bodyID]
+	if !ok {
+		http.Error(w, "Not Found", 404)
+		return
 	}
 
-	bookmarks := b.Active().Filter(body)
+	bookmarks := b.Active().Filter(body.ID)
+	// TODO: enable bicmaeral
+	// bookmarks := b.Active().Filter(body.ID, body.Bicameral)
 
 	sort.Sort(account.SortedBookmarks(bookmarks))
 	var scorable []legislature.Scorable
 	for _, b := range bookmarks {
 		scorable = append(scorable, b)
 	}
-	pageBody.Scorecard, err = resolvers.Resolvers.Find(body).Scorecard(ctx, scorable)
+	pageBody.Scorecard, err = resolvers.Resolvers.Find(body.ID).Scorecard(ctx, scorable)
 	if err != nil {
 		log.WithFields(fields).Errorf("%#v", err)
 		a.WebInternalError500(w, "")

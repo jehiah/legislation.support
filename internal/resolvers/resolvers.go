@@ -19,6 +19,7 @@ var (
 	}
 	NYSenate = legislature.Body{
 		ID:        "nysenate",
+		Bicameral: "ny-assembly",
 		Name:      "NY Senate",
 		DisplayID: "NY-Senate",
 		Location:  "New York",
@@ -27,6 +28,7 @@ var (
 	}
 	NYAssembly = legislature.Body{
 		ID:        "ny-assembly",
+		Bicameral: "nysenate",
 		Name:      "NY Assembly",
 		DisplayID: "NY-Assembly",
 		Location:  "New York",

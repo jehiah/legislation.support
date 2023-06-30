@@ -22,11 +22,14 @@ func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bil
 	}
 	path := fmt.Sprintf("/api/3/bills/%s/%s", url.PathEscape(session), url.PathEscape(printNo))
 	var data BillResponse
-	err := a.get(ctx, path, &url.Values{}, &data)
+	err := a.get(ctx, path, nil, &data)
 	return &(data.Bill), err
 }
 
 func (a NYSenateAPI) get(ctx context.Context, path string, params *url.Values, v interface{}) error {
+	if params == nil {
+		params = &url.Values{}
+	}
 	params.Set("key", a.token)
 	params.Set("view", "with_refs")
 	u := apiDomain + path
@@ -48,6 +51,57 @@ type BillResponse struct {
 	Message      string `json:"message"`
 	ResponseType string `json:"responseType"`
 	Bill         Bill   `json:"result"`
+}
+
+// GetSameAs will return A923 for S20 for the same session
+func (b Bill) GetSameAs() string {
+	for _, a := range b.Amendments.Items {
+		for _, i := range a.SameAs.Items {
+			if i.Session == b.Session {
+				return i.BasePrintNo
+			}
+		}
+	}
+	return ""
+}
+
+func (b Bill) GetSponsors() []MemberEntry {
+	o := []MemberEntry{
+		b.Sponsor.Member,
+	}
+	seen := make(map[int]bool)
+	for _, a := range b.Amendments.Items {
+		for _, m := range a.CoSponsors.Items {
+			if seen[m.MemberID] {
+				continue
+			}
+			seen[m.MemberID] = true
+			o = append(o, m)
+		}
+		// TODO MultiSponsors
+		if a.MultiSponsors.Size > 0 {
+			log.Printf("MultiSponsors %s-%s %#v", b.Session, b.BasePrintNo, a.MultiSponsors)
+			for _, m := range a.MultiSponsors.Items {
+				if seen[m.MemberID] {
+					continue
+				}
+				seen[m.MemberID] = true
+				o = append(o, m)
+			}
+		}
+	}
+	// TODO AdditionalSponsors
+	if b.AdditionalSponsors.Size > 0 {
+		log.Printf("AdditionalSponsors %s-%s %#v", b.Session, b.BasePrintNo, b.AdditionalSponsors)
+		for _, m := range b.AdditionalSponsors.Items {
+			if seen[m.MemberID] {
+				continue
+			}
+			seen[m.MemberID] = true
+			o = append(o, m)
+		}
+	}
+	return o
 }
 
 // from https://legislation.nysenate.gov/static/docs/html/bills.html
@@ -97,42 +151,40 @@ type Bill struct {
 		SequenceNo int    `json:"sequenceNo"`
 	} `json:"programInfo"`
 	Amendments struct {
-		Items struct {
-			A struct {
-				BasePrintNo    string `json:"basePrintNo"`
-				Session        int    `json:"session"`
-				BasePrintNoStr string `json:"basePrintNoStr"`
-				PrintNo        string `json:"printNo"`
-				Version        string `json:"version"`
-				PublishDate    string `json:"publishDate"`
-				SameAs         struct {
-					Items []struct {
-						BasePrintNo string `json:"basePrintNo"`
-						Session     int    `json:"session"`
-						PrintNo     string `json:"printNo"`
-						Version     string `json:"version"`
-					} `json:"items"`
-					Size int `json:"size"`
-				} `json:"sameAs"`
-				Memo             string      `json:"memo"`
-				LawSection       string      `json:"lawSection"`
-				LawCode          string      `json:"lawCode"`
-				ActClause        string      `json:"actClause"`
-				FullTextFormats  []string    `json:"fullTextFormats"`
-				FullText         string      `json:"fullText"`
-				FullTextHTML     interface{} `json:"fullTextHtml"`
-				FullTextTemplate interface{} `json:"fullTextTemplate"`
-				CoSponsors       struct {
-					Items []MemberEntry `json:"items"`
-					Size  int           `json:"size"`
-				} `json:"coSponsors"`
-				MultiSponsors struct {
-					Items []interface{} `json:"items"`
-					Size  int           `json:"size"`
-				} `json:"multiSponsors"`
-				UniBill  bool `json:"uniBill"`
-				Stricken bool `json:"stricken"`
-			} `json:"a"`
+		Items map[string]struct {
+			BasePrintNo    string `json:"basePrintNo"`
+			Session        int    `json:"session"`
+			BasePrintNoStr string `json:"basePrintNoStr"`
+			PrintNo        string `json:"printNo"`
+			Version        string `json:"version"`
+			PublishDate    string `json:"publishDate"`
+			SameAs         struct {
+				Items []struct {
+					BasePrintNo string `json:"basePrintNo"`
+					Session     int    `json:"session"`
+					PrintNo     string `json:"printNo"`
+					Version     string `json:"version"`
+				} `json:"items"`
+				Size int `json:"size"`
+			} `json:"sameAs"`
+			Memo             string      `json:"memo"`
+			LawSection       string      `json:"lawSection"`
+			LawCode          string      `json:"lawCode"`
+			ActClause        string      `json:"actClause"`
+			FullTextFormats  []string    `json:"fullTextFormats"`
+			FullText         string      `json:"fullText"`
+			FullTextHTML     interface{} `json:"fullTextHtml"`
+			FullTextTemplate interface{} `json:"fullTextTemplate"`
+			CoSponsors       struct {
+				Items []MemberEntry `json:"items"`
+				Size  int           `json:"size"`
+			} `json:"coSponsors"`
+			MultiSponsors struct {
+				Items []MemberEntry `json:"items"`
+				Size  int           `json:"size"`
+			} `json:"multiSponsors"`
+			UniBill  bool `json:"uniBill"`
+			Stricken bool `json:"stricken"`
 		} `json:"items"`
 		Size int `json:"size"`
 	} `json:"amendments"`
@@ -148,12 +200,8 @@ type Bill struct {
 			MemberVotes struct {
 				Items struct {
 					EXC struct {
-						Items []struct {
-							MemberID    int    `json:"memberId"`
-							ShortName   string `json:"shortName"`
-							SessionYear int    `json:"sessionYear"`
-						} `json:"items"`
-						Size int `json:"size"`
+						Items []MemberEntry `json:"items"`
+						Size  int           `json:"size"`
 					} `json:"EXC"`
 					AYEWR struct {
 					} `json:"AYEWR"`
@@ -202,7 +250,7 @@ type Bill struct {
 		Text           string `json:"text"`
 	} `json:"approvalMessage"`
 	AdditionalSponsors struct {
-		Items []interface{} `json:"items"`
+		Items []MemberEntry `json:"items"`
 		Size  int           `json:"size"`
 	} `json:"additionalSponsors"`
 	PastCommittees struct {

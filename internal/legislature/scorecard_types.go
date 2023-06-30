@@ -21,6 +21,9 @@ type Scorable interface {
 type ScoredBookmark struct {
 	Legislation *Legislation
 
+	Status    string
+	Committee string
+
 	Oppose bool
 	// Tags   []string
 

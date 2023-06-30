@@ -47,6 +47,8 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 			if err != nil {
 				return err
 			}
+			sb.Status = raw.StatusName
+			sb.Committee = strings.TrimPrefix(raw.BodyName, "Committee on ")
 			scores := make(map[string]string)
 			for _, sponsor := range raw.Sponsors {
 				scores[strings.TrimSpace(sponsor.FullName)] = "Sponsor"
