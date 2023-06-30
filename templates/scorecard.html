@@ -59,7 +59,7 @@ td.affirmative {
 td.negative {
   background-color: #f00;
 }
-td.absent, td.maternity {
+td.excused {
   background-color: #bbb;
 }
 th > .legislation-title {
@@ -176,7 +176,7 @@ th.full-name {
 <script type="module">
 import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
 $("#data-table").tablesorter({
-  sortList:[[1,1],[0,0]],
+  sortList:[[2,1],[0,0]],
   theme: "bootstrap",
   sortInitialOrder:"desc",
   sortRestart: true

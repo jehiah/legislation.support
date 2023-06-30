@@ -104,6 +104,71 @@ func (b Bill) GetSponsors() []MemberEntry {
 	return o
 }
 
+type VoteEntry struct {
+	MemberID int
+	Chamber  string
+	VoteType string // COMMITTEE, FLOOR
+	Vote     string // Aye, Nay, Excused
+}
+type VoteEntries []VoteEntry
+
+func (v VoteEntries) Filter(chamber string) VoteEntries {
+	var o VoteEntries
+	for _, vv := range v {
+		if vv.Chamber == chamber {
+			o = append(o, vv)
+		}
+	}
+	return o
+}
+
+func (b Bill) GetVotes() VoteEntries {
+	var o VoteEntries
+	// TODO: dedupe
+	for _, v := range b.Votes.Items {
+		if v.Version != b.ActiveVersion {
+			// TODO: all versions?
+			continue
+		}
+		for _, m := range v.MemberVotes.Items.Excused.Items {
+			o = append(o, VoteEntry{
+				MemberID: m.MemberID,
+				Chamber:  m.Chamber,
+				VoteType: v.VoteType,
+				Vote:     "Excused",
+			})
+		}
+		for _, m := range v.MemberVotes.Items.Aye.Items {
+			o = append(o, VoteEntry{
+				MemberID: m.MemberID,
+				Chamber:  m.Chamber,
+				VoteType: v.VoteType,
+				Vote:     "Aye",
+			})
+		}
+		for _, m := range v.MemberVotes.Items.Nay.Items {
+			o = append(o, VoteEntry{
+				MemberID: m.MemberID,
+				Chamber:  m.Chamber,
+				VoteType: v.VoteType,
+				Vote:     "Nay",
+			})
+		}
+		for _, m := range v.MemberVotes.Items.AyeWithReservations.Items {
+			o = append(o, VoteEntry{
+				MemberID: m.MemberID,
+				Chamber:  m.Chamber,
+				VoteType: v.VoteType,
+				Vote:     "Aye",
+				// TODO: add note "with reservations"
+			})
+		}
+		// ABSENT ?
+		// Abstained ?
+	}
+	return o
+}
+
 // from https://legislation.nysenate.gov/static/docs/html/bills.html
 type Bill struct {
 	BasePrintNo string `json:"basePrintNo"`
@@ -119,8 +184,9 @@ type Bill struct {
 	Year              int    `json:"year"`
 	PublishedDateTime string `json:"publishedDateTime"`
 	SubstitutedBy     struct {
-		BasePrintNo string `json:"basePrintNo"`
-		Session     int    `json:"session"`
+		BasePrintNo    string `json:"basePrintNo"`
+		Session        int    `json:"session"`
+		BasePrintNoStr string `json:"basePrintNoStr`
 	} `json:"substitutedBy"`
 	Sponsor struct {
 		Member MemberEntry `json:"member"`
@@ -167,24 +233,18 @@ type Bill struct {
 				} `json:"items"`
 				Size int `json:"size"`
 			} `json:"sameAs"`
-			Memo             string      `json:"memo"`
-			LawSection       string      `json:"lawSection"`
-			LawCode          string      `json:"lawCode"`
-			ActClause        string      `json:"actClause"`
-			FullTextFormats  []string    `json:"fullTextFormats"`
-			FullText         string      `json:"fullText"`
-			FullTextHTML     interface{} `json:"fullTextHtml"`
-			FullTextTemplate interface{} `json:"fullTextTemplate"`
-			CoSponsors       struct {
-				Items []MemberEntry `json:"items"`
-				Size  int           `json:"size"`
-			} `json:"coSponsors"`
-			MultiSponsors struct {
-				Items []MemberEntry `json:"items"`
-				Size  int           `json:"size"`
-			} `json:"multiSponsors"`
-			UniBill  bool `json:"uniBill"`
-			Stricken bool `json:"stricken"`
+			Memo             string          `json:"memo"`
+			LawSection       string          `json:"lawSection"`
+			LawCode          string          `json:"lawCode"`
+			ActClause        string          `json:"actClause"`
+			FullTextFormats  []string        `json:"fullTextFormats"`
+			FullText         string          `json:"fullText"`
+			FullTextHTML     interface{}     `json:"fullTextHtml"`
+			FullTextTemplate interface{}     `json:"fullTextTemplate"`
+			CoSponsors       MemberEntryList `json:"coSponsors"`
+			MultiSponsors    MemberEntryList `json:"multiSponsors"`
+			UniBill          bool            `json:"uniBill"`
+			Stricken         bool            `json:"stricken"`
 		} `json:"items"`
 		Size int `json:"size"`
 	} `json:"amendments"`
@@ -199,16 +259,10 @@ type Bill struct {
 			} `json:"committee"`
 			MemberVotes struct {
 				Items struct {
-					EXC struct {
-						Items []MemberEntry `json:"items"`
-						Size  int           `json:"size"`
-					} `json:"EXC"`
-					AYEWR struct {
-					} `json:"AYEWR"`
-					NAY struct {
-					} `json:"NAY"`
-					AYE struct {
-					} `json:"AYE"`
+					Aye                 MemberEntryList `json:"AYE"`
+					AyeWithReservations MemberEntryList `json:"AYEWR"`
+					Nay                 MemberEntryList `json:"NAY"` // ?
+					Excused             MemberEntryList `json:"EXC"` // excused
 				} `json:"items"`
 				Size int `json:"size"`
 			} `json:"memberVotes"`
@@ -249,11 +303,8 @@ type Bill struct {
 		Signer         string `json:"signer"`
 		Text           string `json:"text"`
 	} `json:"approvalMessage"`
-	AdditionalSponsors struct {
-		Items []MemberEntry `json:"items"`
-		Size  int           `json:"size"`
-	} `json:"additionalSponsors"`
-	PastCommittees struct {
+	AdditionalSponsors MemberEntryList `json:"additionalSponsors"`
+	PastCommittees     struct {
 		Items []struct {
 			Chamber       string `json:"chamber"`
 			Name          string `json:"name"`
@@ -362,11 +413,18 @@ type MemberEntry struct {
 	MemberID        int    `json:"memberId"`
 	FullName        string `json:"fullName,omitempty"`
 	ShortName       string `json:"shortName"`
-	SessionYear     int    `json:"sessionYear"`
+	Chamber         string `json:"chamber"` // SENATE
 	DistrictCode    int    `json:"districtCode"`
 	Alternate       bool   `json:"alternate"`
+	SessionYear     int    `json:"sessionYear"`
 	SessionMemberID int    `json:"sessionMemberId,omitempty"`
 }
+
+type MemberEntryList struct {
+	Items []MemberEntry `json:"items"`
+	Size  int           `json:"size"`
+}
+
 type Person struct {
 	PersonID   int         `json:"personId"`
 	FullName   string      `json:"fullName"`

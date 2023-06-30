@@ -39,22 +39,29 @@ func (a NYSenate) Scorecard(ctx context.Context, bookmarks []legislature.Scorabl
 		g.Go(func() error {
 			sb := b.NewScore()
 			billSession, basePrintNo, _ := strings.Cut(string(sb.Legislation.ID), "-")
-			raw, err := a.api.GetBill(ctx, billSession, basePrintNo)
+			orginalBill, err := a.api.GetBill(ctx, billSession, basePrintNo)
+			votedBill := orginalBill
 			if err != nil {
 				return err
 			}
-			sb.Status = raw.Status.StatusDesc
-			sb.Committee = raw.Status.CommitteeName
+
+			if orginalBill.SubstitutedBy.BasePrintNo != "" {
+				votedBill, err = a.api.GetBill(ctx, strconv.Itoa(orginalBill.SubstitutedBy.Session), orginalBill.SubstitutedBy.BasePrintNo)
+				if err != nil {
+					return err
+				}
+			}
+
+			sb.Status = votedBill.Status.StatusDesc
+			sb.Committee = orginalBill.Status.CommitteeName
 			scores := make(map[int]string)
-			for _, sponsor := range raw.GetSponsors() {
+			for _, sponsor := range orginalBill.GetSponsors() {
 				scores[sponsor.MemberID] = "Sponsor"
 			}
 
-			// for _, h := range raw.History {
-			// 	for _, v := range h.Votes {
-			// 		scores[strings.TrimSpace(v.FullName)] = v.Vote
-			// 	}
-			// }
+			for _, v := range votedBill.GetVotes().Filter(orginalBill.BillType.Chamber) {
+				scores[v.MemberID] = v.Vote
+			}
 
 			for _, p := range people {
 				sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.MemberID], Desired: !sb.Oppose})

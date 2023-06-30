@@ -44,17 +44,17 @@ type Score struct {
 func (s Score) Score() int {
 	if s.Desired {
 		switch strings.ToLower(s.Status) {
-		case "affirmative", "sponsor":
+		case "affirmative", "aye", "sponsor":
 			return 1
-		case "negative":
+		case "negative", "nay":
 			return -1
 		}
 		return 0
 	}
 	switch strings.ToLower(s.Status) {
-	case "affirmative", "sponsor":
+	case "affirmative", "aye", "sponsor":
 		return -1
-	case "negative":
+	case "negative", "nay":
 		return 1
 	default:
 		return 0
@@ -62,7 +62,16 @@ func (s Score) Score() int {
 }
 
 func (s Score) CSS() string {
-	return strings.ToLower(s.Status)
+	switch strings.ToLower(s.Status) {
+	case "affirmative", "aye", "sponsor":
+		return "affirmative"
+	case "negative", "nay":
+		return "negative"
+	case "":
+		return ""
+	default:
+		return "excused"
+	}
 }
 
 func (c ScoredBookmark) PercentCorrect() float64 {
