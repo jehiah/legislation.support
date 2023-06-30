@@ -88,6 +88,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 
 			// Bills get substituted by bills in the other chamber; in that case votes in both chambers show on the substituted bill
 			if orginalBill.SubstitutedBy.BasePrintNo != "" {
+				log.Printf("substitution %s-%s -> %d-%s", billSession, basePrintNo, orginalBill.SubstitutedBy.Session, orginalBill.SubstitutedBy.BasePrintNo)
 				votedBill, err = a.GetBill(ctx, strconv.Itoa(orginalBill.SubstitutedBy.Session), orginalBill.SubstitutedBy.BasePrintNo)
 				if err != nil {
 					return err
