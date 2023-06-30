@@ -2,10 +2,12 @@ package nyc
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislator/db"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -23,15 +25,29 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 		return s, err
 	}
 
+	md, err := a.PersonMetadata(ctx)
+	if err != nil {
+		log.Printf("error: %s", err)
+	}
+	metaByID := make(map[int]PersonMetadata)
+	for _, mm := range md {
+		metaByID[mm.ID] = mm
+	}
+
 	for _, p := range allPeople {
 		switch p.ID {
 		case 7780: // skip public advocate
 			continue
 		}
+		var district string
+		if md, ok := metaByID[p.ID]; ok {
+			district = strconv.Itoa(md.District)
+		}
 		s.People = append(s.People, legislature.ScorecardPerson{
 			FullName: strings.TrimSpace(p.FullName),
 			URL:      "https://intro.nyc/councilmembers/" + p.Slug,
-			// TODO: Party, District
+			District: district,
+			// TODO: Party
 		})
 		people = append(people, p)
 	}

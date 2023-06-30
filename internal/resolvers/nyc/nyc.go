@@ -89,6 +89,22 @@ func (n NYC) ActivePeople(ctx context.Context) ([]db.Person, error) {
 	return people, err
 }
 
+type PersonMetadata struct {
+	ID       int
+	District int
+}
+
+func (n NYC) PersonMetadata(ctx context.Context) ([]PersonMetadata, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/data/people_metadata.json",
+	}
+	var md []PersonMetadata
+	err := n.get(ctx, u.String(), &md)
+	return md, err
+}
+
 func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 	if d == nil {
 		return nil
