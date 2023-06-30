@@ -317,7 +317,8 @@ func (a NYSenateAPI) GetMembers(ctx context.Context, session, chamber string) ([
 		return nil, nil
 	}
 	path := fmt.Sprintf("/api/3/members/%s/%s", url.PathEscape(session), url.PathEscape(chamber))
-	params := &url.Values{"full": []string{"true"}}
+	// senate is 63, assembly is 150
+	params := &url.Values{"full": []string{"true"}, "limit": []string{"200"}}
 	var data MemberListResponse
 	err := a.get(ctx, path, params, &data)
 	if err != nil {

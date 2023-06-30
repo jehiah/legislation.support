@@ -119,11 +119,13 @@ th.full-name {
   <tr class="tablesorter-ignoreRow">
     <th></th>
     <th></th>
+    <th></th>
     {{range .Data}}
     <th><div class="legislation-title">{{.Legislation.Title}}</div></th>
     {{end}}
   </tr>
   <tr class="tablesorter-ignoreRow">
+    <th></th>
     <th></th>
     <th></th>
     {{range .Data}}
@@ -133,12 +135,14 @@ th.full-name {
   <tr class="tablesorter-ignoreRow">
     <th></th>
     <th></th>
+    <th></th>
     {{range .Data}}
     <th><div class="status">{{.Status}}</div></th>
     {{end}}
   </tr>
   <tr>
     <th data-sortInitialOrder="asc" class="text-nowrap">{{.Metadata.PersonTitle}}</th>
+    <th>District</th>
     <th class="text-nowrap">% Correct</th>
     {{range .Data}}
     <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
@@ -150,6 +154,7 @@ th.full-name {
 {{range $i, $p := .People}} 
 <tr>
   <th class="full-name">{{$p.FullName}}</th>
+  <th class="district">{{$p.District}}</th>
   <td class="percent-correct number" data-percent="{{printf "%0.1f%%" ($S.PercentCorrect $i) }}">{{printf "%0.1f%%" ($S.PercentCorrect $i) }}</td>
   {{range $S.Data}}
     <td class="score {{(index .Scores $i).CSS}} " data-text="{{(index .Scores $i).Score}}">{{(index .Scores $i).Status}}</td>
