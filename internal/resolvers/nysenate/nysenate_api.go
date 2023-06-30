@@ -80,7 +80,7 @@ func (b Bill) GetSponsors() []MemberEntry {
 		}
 		// TODO MultiSponsors
 		if a.MultiSponsors.Size > 0 {
-			log.Printf("MultiSponsors %s-%s %#v", b.Session, b.BasePrintNo, a.MultiSponsors)
+			log.Printf("MultiSponsors %d-%s %#v", b.Session, b.BasePrintNo, a.MultiSponsors)
 			for _, m := range a.MultiSponsors.Items {
 				if seen[m.MemberID] {
 					continue
@@ -92,7 +92,7 @@ func (b Bill) GetSponsors() []MemberEntry {
 	}
 	// TODO AdditionalSponsors
 	if b.AdditionalSponsors.Size > 0 {
-		log.Printf("AdditionalSponsors %s-%s %#v", b.Session, b.BasePrintNo, b.AdditionalSponsors)
+		log.Printf("AdditionalSponsors %d-%s %#v", b.Session, b.BasePrintNo, b.AdditionalSponsors)
 		for _, m := range b.AdditionalSponsors.Items {
 			if seen[m.MemberID] {
 				continue

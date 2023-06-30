@@ -72,9 +72,8 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID accoun
 		return
 	}
 
-	bookmarks := b.Active().Filter(body.ID)
-	// TODO: enable bicmaeral
-	// bookmarks := b.Active().Filter(body.ID, body.Bicameral)
+	// bookmarks := b.Active().Filter(body.ID)
+	bookmarks := b.Active().Filter(body.ID, body.Bicameral)
 
 	sort.Sort(account.SortedBookmarks(bookmarks))
 	var scorable []legislature.Scorable

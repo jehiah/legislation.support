@@ -87,7 +87,7 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 	if err != nil {
 		return nil, err
 	}
-	return billToLegislation(bill, a.body.ID), nil
+	return bill.Legislation(a.body.ID), nil
 }
 
 func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
@@ -116,10 +116,10 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 	if err != nil {
 		return nil, err
 	}
-	return billToLegislation(bill, a.body.ID), nil
+	return bill.Legislation(a.body.ID), nil
 }
 
-func billToLegislation(bill *Bill, body legislature.BodyID) *legislature.Legislation {
+func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation {
 	if bill == nil {
 		return nil
 	}
