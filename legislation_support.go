@@ -27,6 +27,7 @@ import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 //go:embed templates/*
@@ -321,71 +322,71 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	legUrl := strings.TrimSpace(r.Form.Get("legislation_url"))
-	u, err := url.Parse(legUrl)
-	if err != nil {
-		log.WithContext(ctx).WithFields(logFields).Warningf("%s", err)
-		a.WebError(w, 422, err.Error())
-		return
-	}
-	logFields["legislation_url"] = u.String()
-	log.WithContext(ctx).WithFields(logFields).Infof("parsed URL")
-	bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
-	if err != nil {
-		log.WithContext(ctx).WithFields(logFields).Errorf("%s", err)
-		a.WebInternalError500(w, "")
-		return
-	}
-	if bill == nil {
-		log.WithContext(ctx).WithFields(logFields).Info("matching legislation not found")
-		http.Error(w, fmt.Sprintf("Legislation matching url %q not found", u), 422)
-		return
+	g := new(errgroup.Group)
+	// support multiple URL's
+	for _, legUrl := range strings.Fields(strings.TrimSpace(r.Form.Get("legislation_url"))) {
+		legUrl := legUrl
+
+		g.Go(func() error {
+
+			u, err := url.Parse(legUrl)
+			if err != nil {
+				return err
+			}
+			logFields := log.Fields{"uid": uid, "profileID": profileID, "legislation_url": u.String()}
+			log.WithContext(ctx).WithFields(logFields).Infof("parsed URL")
+			bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
+			if err != nil {
+				return err
+			}
+			if bill == nil {
+				return fmt.Errorf("Legislation matching url %q not found", u)
+			}
+
+			err = a.SaveBill(ctx, *bill)
+			if err != nil {
+				if IsAlreadyExists(err) {
+					a.UpdateBill(ctx, *bill)
+				} else {
+					return err
+				}
+			}
+
+			bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))
+			if err != nil {
+				return err
+			}
+			if bookmark != nil {
+				bookmark.Notes = strings.TrimSpace(r.Form.Get("notes"))
+				bookmark.Tags = strings.Fields(strings.TrimSpace(r.Form.Get("tags")))
+				bookmark.Oppose = r.Form.Get("support") == "👎"
+
+				// update
+				err = a.UpdateBookmark(ctx, profileID, *bookmark)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
+			oppose := r.Form.Get("support") == "👎"
+			err = a.SaveBookmark(ctx, profileID, account.Bookmark{
+				UID:           uid,
+				BodyID:        bill.Body,
+				LegislationID: bill.ID,
+				Oppose:        oppose,
+				Created:       time.Now().UTC(),
+				Notes:         strings.TrimSpace(r.Form.Get("notes")),
+				Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
+			})
+			if err != nil && !IsAlreadyExists(err) {
+				return nil
+			}
+			return nil
+		})
 	}
 
-	err = a.SaveBill(ctx, *bill)
-	if err != nil {
-		if IsAlreadyExists(err) {
-			a.UpdateBill(ctx, *bill)
-		} else {
-			log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-			a.WebInternalError500(w, "")
-			return
-		}
-	}
-
-	bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))
-	if err != nil {
-		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		a.WebInternalError500(w, "")
-		return
-	}
-	if bookmark != nil {
-		bookmark.Notes = strings.TrimSpace(r.Form.Get("notes"))
-		bookmark.Tags = strings.Fields(strings.TrimSpace(r.Form.Get("tags")))
-		bookmark.Oppose = r.Form.Get("support") == "👎"
-
-		// update
-		err = a.UpdateBookmark(ctx, profileID, *bookmark)
-		if err != nil {
-			log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-			a.WebInternalError500(w, "")
-			return
-		}
-		http.Redirect(w, r, profile.Link(), 302)
-		return
-	}
-
-	oppose := r.Form.Get("support") == "👎"
-	err = a.SaveBookmark(ctx, profileID, account.Bookmark{
-		UID:           uid,
-		BodyID:        bill.Body,
-		LegislationID: bill.ID,
-		Oppose:        oppose,
-		Created:       time.Now().UTC(),
-		Notes:         strings.TrimSpace(r.Form.Get("notes")),
-		Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
-	})
-	if err != nil && !IsAlreadyExists(err) {
+	if err = g.Wait(); err != nil {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
 		a.WebInternalError500(w, "")
 		return
