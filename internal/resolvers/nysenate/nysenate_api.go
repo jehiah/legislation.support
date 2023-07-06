@@ -105,10 +105,11 @@ func (b Bill) GetSponsors() []MemberEntry {
 }
 
 type VoteEntry struct {
-	MemberID int
-	Chamber  string
-	VoteType string // COMMITTEE, FLOOR
-	Vote     string // Aye, Nay, Excused
+	MemberID  int
+	Chamber   string
+	VoteType  string // COMMITTEE, FLOOR
+	Vote      string // Aye, Nay, Excused
+	ShortName string
 }
 type VoteEntries []VoteEntry
 
@@ -126,40 +127,45 @@ func (b Bill) GetVotes() VoteEntries {
 	var o VoteEntries
 	// TODO: dedupe
 	for _, v := range b.Votes.Items {
-		if v.Version != b.ActiveVersion {
+		if v.Version != b.ActiveVersion && v.Version != "" {
+			// Assembly workaround Votes don't have version
 			// TODO: all versions?
 			continue
 		}
 		for _, m := range v.MemberVotes.Items.Excused.Items {
 			o = append(o, VoteEntry{
-				MemberID: m.MemberID,
-				Chamber:  m.Chamber,
-				VoteType: v.VoteType,
-				Vote:     "Excused",
+				ShortName: m.ShortName,
+				MemberID:  m.MemberID,
+				Chamber:   m.Chamber,
+				VoteType:  v.VoteType,
+				Vote:      "Excused",
 			})
 		}
 		for _, m := range v.MemberVotes.Items.Aye.Items {
 			o = append(o, VoteEntry{
-				MemberID: m.MemberID,
-				Chamber:  m.Chamber,
-				VoteType: v.VoteType,
-				Vote:     "Aye",
+				ShortName: m.ShortName,
+				MemberID:  m.MemberID,
+				Chamber:   m.Chamber,
+				VoteType:  v.VoteType,
+				Vote:      "Aye",
 			})
 		}
 		for _, m := range v.MemberVotes.Items.Nay.Items {
 			o = append(o, VoteEntry{
-				MemberID: m.MemberID,
-				Chamber:  m.Chamber,
-				VoteType: v.VoteType,
-				Vote:     "Nay",
+				ShortName: m.ShortName,
+				MemberID:  m.MemberID,
+				Chamber:   m.Chamber,
+				VoteType:  v.VoteType,
+				Vote:      "Nay",
 			})
 		}
 		for _, m := range v.MemberVotes.Items.AyeWithReservations.Items {
 			o = append(o, VoteEntry{
-				MemberID: m.MemberID,
-				Chamber:  m.Chamber,
-				VoteType: v.VoteType,
-				Vote:     "Aye",
+				ShortName: m.ShortName,
+				MemberID:  m.MemberID,
+				Chamber:   m.Chamber,
+				VoteType:  v.VoteType,
+				Vote:      "Aye",
 				// TODO: add note "with reservations"
 			})
 		}
@@ -249,25 +255,8 @@ type Bill struct {
 		Size int `json:"size"`
 	} `json:"amendments"`
 	Votes struct {
-		Items []struct {
-			Version   string `json:"version"`
-			VoteType  string `json:"voteType"`
-			VoteDate  string `json:"voteDate"`
-			Committee struct {
-				Chamber string `json:"chamber"`
-				Name    string `json:"name"`
-			} `json:"committee"`
-			MemberVotes struct {
-				Items struct {
-					Aye                 MemberEntryList `json:"AYE"`
-					AyeWithReservations MemberEntryList `json:"AYEWR"`
-					Nay                 MemberEntryList `json:"NAY"` // ?
-					Excused             MemberEntryList `json:"EXC"` // excused
-				} `json:"items"`
-				Size int `json:"size"`
-			} `json:"memberVotes"`
-		} `json:"items"`
-		Size int `json:"size"`
+		Items []BillVote `json:"items"`
+		Size  int        `json:"size"`
 	} `json:"votes"`
 	VetoMessages struct {
 		Items []struct {
@@ -363,6 +352,28 @@ type Bill struct {
 	} `json:"billInfoRefs"`
 }
 
+type BillVote struct {
+	Version   string `json:"version"`
+	VoteType  string `json:"voteType"`
+	VoteDate  string `json:"voteDate"`
+	Committee struct {
+		Chamber string `json:"chamber"`
+		Name    string `json:"name"`
+	} `json:"committee"`
+	MemberVotes struct {
+		Items MemberVotes `json:"items"`
+		Size  int         `json:"size"`
+	} `json:"memberVotes"`
+}
+
+type MemberVotes struct {
+	Aye                 MemberEntryList `json:"AYE"`
+	AyeWithReservations MemberEntryList `json:"AYEWR"`
+	Nay                 MemberEntryList `json:"NAY"` // ?
+	Excused             MemberEntryList `json:"EXC"` // excused
+}
+
+// Note: response might have duplicates
 func (a NYSenateAPI) GetMembers(ctx context.Context, session, chamber string) ([]MemberShort, error) {
 	if session == "" || chamber == "" {
 		return nil, nil
@@ -378,6 +389,20 @@ func (a NYSenateAPI) GetMembers(ctx context.Context, session, chamber string) ([
 	var out []MemberShort
 	for _, m := range data.Result.Items {
 		out = append(out, m.Short())
+		for memberSession, mm := range m.Sessions {
+			for _, mmm := range mm {
+				// could have a different short name for this session
+				// i.e. 2021: BICHOTTE, BICHOTTE HERMELYN
+				if memberSession == session && mmm.ShortName != m.ShortName {
+					out = append(out, MemberShort{
+						MemberID:  m.MemberID,
+						FullName:  m.FullName,
+						ShortName: mmm.ShortName,
+						District:  mmm.DistrictCode,
+					})
+				}
+			}
+		}
 	}
 	return out, nil
 }
@@ -406,7 +431,7 @@ type MemberSession struct {
 	FullName     string                   `json:"fullName"` // "James L. Seward"
 	ShortName    string                   `json:"shortName"`
 	DistrictCode int                      `json:"districtCode"`
-	Sessions     map[string][]MemberEntry `json:"sessionShortNameMap"`
+	Sessions     map[string][]MemberEntry `json:"sessionShortNameMap"` // year: [...]
 	Person       Person                   `json:"person"`
 }
 type MemberEntry struct {
