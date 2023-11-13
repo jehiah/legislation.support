@@ -5,6 +5,9 @@
   .last-modified {
     font-size:.5rem;
   }
+  .profile-link {
+    font-size: .75rem;
+  }
 </style>
 
 {{end}}
@@ -15,17 +18,17 @@
 {{ if .Profiles }}
 
 <div class="col-12">
-
-<h2>Your Legislation Profiles</h2>
+  <h2>Your Legislation Profiles</h2>
 </div>
 
 <ul class="list-group mb-5 ms-2 col-3">
 {{range .Profiles}}
   <li class="list-group-item d-flex justify-content-between align-items-start">
     <div class="ms-2 me-auto">
-      <div class="fw-bold"><a href="{{.Link}}">{{.Name}}</a></div>
+      <div class="fw-bold">{{.Name}}</div>
+      <div class="profile-link"><a href="{{.Link}}">{{.FullLink}}</a></div>
       <span class="last-modified">Last Modified {{.LastModified | Time}}</span>
-  </div>
+    </div>
   </li>
 {{end}}
 </ul>
@@ -41,20 +44,29 @@
 
 <p>Pick a Profile Name.</p>
 
+<div class="col-12 col-sm-8 col-md-6">
 <form action="/" method="post">
   <input type="hidden" name="id" id="id">
   <div class="mb-3">
-    <label for="profile">Profile Name</label>
-    <input type="text" name="name" id="profile-name" placeholder="Jane Citizen's Legislation">
+    <div class="input-group">
+      <span class="input-group-text" id="inputGroupPrepend">Name</span>
+      <input type="text" class="form-control" name="name" id="profile-name" placeholder="Jane's Legislation Profile" autocomplete="off">
+    </div>
   </div>
-
-  <p class="preview">Your profile will be available at <code>https://legislation.support/<span id="preview-profile">jane-citizen</span></code></p>
+  <div class="mb-3 ">
+    <div class="input-group">
+      <span class="input-group-text" id="inputGroupPrepend">URL</span>
+      <input type="text" class="form-control " name="url" id="url" placeholder="" autocomplete="off">
+    </div>
+    <div class="form-text preview">Your profile will be available at <code>https://legislation.support/<span id="preview-profile">janes-legislation-profile</span></code></div>
+  </div>
 
   <div class="mb-3">
     <button type="submit" class="btn-primary">Create Profile</button>
   </div>
 
 </form>
+</div>
 
 {{end}}
 
@@ -73,14 +85,22 @@ function slugify(text){
     .replace(/-+$/, '');            // Trim - from end of text
 }
 
+document.getElementById('url').placeholder = slugify(document.getElementById('profile-name').placeholder)
+
 function onupdate() {
-  var p = document.getElementById('profile-name').value;
-  if (p === "")  { p = "jane-citizen"; }
+  var urlEl = document.getElementById('url');
+  var nameEl = document.getElementById('profile-name');
+  var p = urlEl.value;
+  if (p === "")  { p = nameEl.value }
+  if (p === "")  { p = nameEl.placeholder }
   var slug = slugify(p);
   document.getElementById('id').value=slug;
+  urlEl.placeholder = slug
   document.getElementById('preview-profile').textContent = slug;
 }
 document.getElementById('profile-name').addEventListener("change", onupdate)
 document.getElementById('profile-name').addEventListener("input", onupdate)
+document.getElementById('url').addEventListener("change", onupdate)
+document.getElementById('url').addEventListener("input", onupdate)
 </script>
 {{end}}

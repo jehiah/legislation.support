@@ -31,6 +31,9 @@ func (p Profile) HasAccess(u UID) bool {
 func (p Profile) Link() string {
 	return "/" + url.PathEscape(string(p.ID))
 }
+func (p Profile) FullLink() string {
+	return "https://legislation.support/" + url.PathEscape(string(p.ID))
+}
 
 type Bookmark struct {
 	BodyID        legislature.BodyID

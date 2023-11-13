@@ -237,6 +237,7 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.ProfileID) {
+	templateName := "profile.html"
 	t := newTemplate(a.templateFS, "profile.html")
 	ctx := r.Context()
 	uid := a.User(r)
@@ -272,6 +273,10 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 		EditMode: uid == profile.UID,
 		UID:      uid,
 	}
+	if body.EditMode {
+		templateName = "profile_edit.html"
+		t = newTemplate(a.templateFS, "profile_edit.html")
+	}
 	b, err := a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
 		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
@@ -290,7 +295,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	sort.Sort(account.SortedBookmarks(body.ArchivedBookmarks))
 	// log.Printf("bookmarks %#v", body.Bookmarks)
 
-	err = t.ExecuteTemplate(w, "profile.html", body)
+	err = t.ExecuteTemplate(w, templateName, body)
 	if err != nil {
 		log.WithField("uid", uid).Error(err)
 		a.WebInternalError500(w, "")
@@ -514,6 +519,7 @@ func main() {
 	flag.Parse()
 	log.SetReportCaller(true)
 	if *devMode {
+		*logRequests = true
 		log.SetFormatter(&log.TextFormatter{TimestampFormat: tsFmt, FullTimestamp: true})
 	} else {
 		log.SetFormatter(&fluentdFormatter{})
@@ -582,7 +588,7 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		log.Printf("listening to HTTPS on port %s", port)
+		log.Printf("listening to HTTPS on port %s https://dev.legislation.support", port)
 		if err := http.ListenAndServeTLS(":"+port, "dev/cert.pem", "dev/key.pem", h); err != nil {
 			log.Fatal(err)
 		}

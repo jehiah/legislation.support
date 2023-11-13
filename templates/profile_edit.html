@@ -3,9 +3,14 @@
 {{define "head"}}
 
 <style>
+.middle {
+  background-color: var(--bs-gray-100);
+}
+
 .profile-name {
   border-bottom: 1px solid var(--brand);
 }
+
 .legislation-id {
   display: inline-block;
 }
@@ -31,7 +36,6 @@
 {{end}}
 {{define "middle"}}
 
-
 <div class="row">
 <h2 class="profile-name">{{.Profile.Name}}</h2>
 </div>
@@ -40,14 +44,59 @@
   <p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
 </div> -->
 
+<div class="row">
+
+<div class="col-12 col-md-8 mb-5">
+<div class="card px-2 py-1">
+<form action="/data/profile" method="post">
+  <input type="hidden" value="{{.Profile.ID}}" name="profile_id">
+  <div class="mb-2 mt-2">
+    <label for="legislation-url" class="form-label">URL of Legislation</label>
+
+    <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://city-council.gov/bill/A-1234" pattern="https?://.*">
+    <div class="invalid-feedback">
+      Supported URL's: intro.nyc, legistar.council.nyc.gov, www.nysenate.gov
+    </div>
+  </div>
+
+<div class="form-floating mb-2">
+  <textarea class="form-control" placeholder="" id="floatingNotes" name="notes" style="height: 4em;"></textarea>
+  <label for="floatingNotes">Notes</label>
+</div>
+
+<div class="row g-3 align-items-center mb-2">
+
+  <div class="col-auto">
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi bi-tag" alt="Tags"></i></span>
+    <input type="text" id="tags" name="tags" class="form-control" aria-describedby="tags">
+  </div>
+  </div>
+  <div class="col-auto">
+    <span id="passwordTags" class="form-text">
+      Space separated tags
+    </span>
+  </div>
+</div>
+
+  <div class="mb-1">
+    Save:
+    <button type="submit" name="support" value="👍" class="btn btn-primary">👍</button>
+    <!-- <button type="submit" name="support" value="👎" class="btn btn-primary">👎</button> -->
+  </div>
+
+</form>
+</div>
+</div>
+</div>
+
 <div class="bookmarks">
 
 {{if (and (not .Bookmarks) (not .ArchivedBookmarks)) }}
-<div class="row">
-<p>No legislation</p>
-</div>
+  <div class="row">
+  <p>No legislation</p>
+  </div>
 {{end}}
-
 
 {{if .Bookmarks}}
 
@@ -62,6 +111,7 @@
 </div>
 {{end}}
 
+
 {{range .Bookmarks}}
   <div class="row bookmark">
     <div class="row1">
@@ -73,6 +123,7 @@
     <div class="notes">{{.Notes}}</div>
     {{end}}
     <div class="tags">
+      <i class="bi bi-tag" alt="Tags"></i>
       <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
       {{if .Legislation.Session}}
       <div class="session tag" >session:{{.Legislation.Session}}</div>
@@ -83,7 +134,6 @@
     </div>
   </div>
 {{end}}
-</div>
 
 {{if .ArchivedBookmarks }}
 <div class="row mt-5" id="show-archived">
@@ -105,6 +155,7 @@
     <div class="notes">{{.Notes}}</div>
     {{end}}
     <div class="tags">
+      <i class="bi bi-tag" alt="Tags"></i>
       <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
       {{if .Legislation.Session}}
       <div class="session tag" >session:{{.Legislation.Session}}</div>
@@ -115,6 +166,8 @@
     </div>
   </div>
 {{end}}
+</div> 
+
 </div>
 
 {{end}}
