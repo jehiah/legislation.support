@@ -302,7 +302,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	}
 }
 
-// ProfilePost handles the add of a new URL to a profile
+// ProfilePost handles the add of a new URL to a profile, or update of a profile
 func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	ctx := r.Context()
@@ -322,7 +322,7 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if uid != profile.UID {
+	if !profile.HasAccess(uid) {
 		a.WebPermissionError403(w, "")
 		return
 	}
@@ -399,13 +399,16 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, profile.Link(), 302)
 }
 
+// ProfileRemove removes a bookmark from a profile
 func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	err := r.ParseMultipartForm(2 << 20) // 2Mb
+	if err != nil {
+		log.Printf("err parsing form %s", err)
+	}
 	ctx := r.Context()
 	uid := a.User(r)
-
-	profileID := account.ProfileID(r.Form.Get("profile_id"))
-	body, legID := legislature.BodyID(r.Form.Get("body_id")), legislature.LegislationID(r.Form.Get("legislation_id"))
+	profileID := account.ProfileID(r.PostForm.Get("profile_id"))
+	body, legID := legislature.BodyID(r.PostForm.Get("body_id")), legislature.LegislationID(r.PostForm.Get("legislation_id"))
 	logFields := log.Fields{"uid": uid, "profileID": profileID, "body": body, "legislation_id": legID}
 
 	profile, err := a.GetProfile(ctx, profileID)

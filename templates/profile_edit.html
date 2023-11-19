@@ -3,7 +3,7 @@
 {{define "head"}}
 
 <style>
-.middle {
+body {
   background-color: var(--bs-gray-100);
 }
 
@@ -32,6 +32,9 @@
   color: var(--grey-dark);
   border-left: solid 4px var(--grey-light-2);
 }
+#edit-form .legislation-url {
+  font-size:.75rem;
+}
 </style>
 {{end}}
 {{define "middle"}}
@@ -46,26 +49,29 @@
 
 <div class="row">
 
-<div class="col-12 col-md-8 mb-5">
+<div class="col-12 col-md-8 mb-5 mt-2">
 <div class="card px-2 py-1">
 <form action="/data/profile" method="post">
   <input type="hidden" value="{{.Profile.ID}}" name="profile_id">
   <div class="mb-2 mt-2">
-    <label for="legislation-url" class="form-label">URL of Legislation</label>
-
-    <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://city-council.gov/bill/A-1234" pattern="https?://.*">
+    <span><strong>Add Legislation</strong></span>
+  </div>
+    <div class="mb-2 mt-2">
+    <div class="input-group">
+      <span class="input-group-text">URL</span>
+      <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://city-council.gov/bill/A-1234" pattern="https?://.*">
+    </div>
     <div class="invalid-feedback">
       Supported URL's: intro.nyc, legistar.council.nyc.gov, www.nysenate.gov
     </div>
   </div>
 
-<div class="form-floating mb-2">
+<div class="form-floating mb-2" id="notes-row" style="display:none;">
   <textarea class="form-control" placeholder="" id="floatingNotes" name="notes" style="height: 4em;"></textarea>
   <label for="floatingNotes">Notes</label>
 </div>
 
-<div class="row g-3 align-items-center mb-2">
-
+<div class="row g-3 align-items-center mb-2" id="tag-row" style="display:none;">
   <div class="col-auto">
   <div class="input-group">
     <span class="input-group-text"><i class="bi bi-tag" alt="Tags"></i></span>
@@ -82,7 +88,7 @@
   <div class="mb-1">
     Save:
     <button type="submit" name="support" value="👍" class="btn btn-primary">👍</button>
-    <!-- <button type="submit" name="support" value="👎" class="btn btn-primary">👎</button> -->
+    <button type="submit" name="support" value="👎" class="btn btn-primary">👎</button>
   </div>
 
 </form>
@@ -115,7 +121,7 @@
 {{range .Bookmarks}}
   <div class="row bookmark">
     <div class="row1">
-
+    <div class="edit-bookmark float-end"><a href="#" class="edit" data-legislationid="{{.LegislationID}}" data-bodyid="{{.BodyID}}">edit</a></div>
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
     <div class="legislation-title">{{.Legislation.Title}}</div>
     </div>
@@ -124,6 +130,9 @@
     {{end}}
     <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>
+      {{if .Oppose}}
+      <div class="oppose tag">Oppose</div>
+      {{end}}
       <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
       {{if .Legislation.Session}}
       <div class="session tag" >session:{{.Legislation.Session}}</div>
@@ -156,6 +165,9 @@
     {{end}}
     <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>
+      {{if .Oppose}}
+      <div class="oppose tag">Oppose</div>
+      {{end}}
       <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
       {{if .Legislation.Session}}
       <div class="session tag" >session:{{.Legislation.Session}}</div>
@@ -170,4 +182,122 @@
 
 </div>
 
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasRightLabel">Edit</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+
+
+
+    <form id="edit-form" action="/data/profile" method="post">
+      <input type="hidden" name="body_id">
+      <input type="hidden" name="legislation_id">
+      <input type="hidden" name="legislation_url">
+      <input type="hidden" name="profile_id" value="{{.Profile.ID}}">
+
+      <div class="legislation-id"><a href=""></a></div>
+      <div class="legislation-title"></div>
+      <div class="legislation-url mt-1"><a href=""></a></div>
+      
+    <div class="form-floating mt-2 mb-2">
+      <textarea class="form-control" placeholder="" name="notes" style="height: 4em;"></textarea>
+      <label for="floatingNotes">Notes</label>
+    </div>
+    
+    <div class="row g-3 align-items-center mb-2">
+      <div class="col-auto">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-tag" alt="Tags"></i></span>
+        <input type="text" name="tags" class="form-control" aria-describedby="tags">
+      </div>
+      </div>
+      <div class="col-auto">
+        <span id="passwordTags" class="form-text">
+          Space separated tags
+        </span>
+      </div>
+    </div>
+
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="edit-oppose" name="support" value="👎">
+      <label class="form-check-label" for="edit-oppose">Oppose Legislation</label>
+    </div>    
+    
+    <div class="mb-1 mt-3 text-bg-light p-3 text-end">
+      <button type="button" name="submit" value="remove" class="btn btn-danger" id="edit-remove">Remove</button>
+      <button type="submit" name="submit" value="save" class="btn btn-primary">Save</button>
+    </div>
+  
+  </form>
+
+
+
+
+  </div>
+</div>
 {{end}}
+
+
+{{ define "javascript" }}
+<script type="module">
+  const bookmarks = new Map({{.Bookmarks}}.map(d => [d.BodyID + d.LegislationID, d]))
+
+  document.getElementById('legislation-url').addEventListener("change", _ => {
+    document.getElementById('tag-row').style.display=''
+    document.getElementById('notes-row').style.display=''
+  })
+  document.getElementById('legislation-url').addEventListener("input", _ => {
+    document.getElementById('tag-row').style.display=''
+    document.getElementById('notes-row').style.display=''
+  })
+
+  const bsOffcanvas = new bootstrap.Offcanvas('#offcanvasRight')
+
+  const editLinks = document.querySelectorAll("a.edit")
+  const editLinksList = [...editLinks].map(el => {
+    el.addEventListener("click", event => {
+      event.preventDefault()
+      bsOffcanvas.show()
+      const b = bookmarks.get(event.target.dataset.bodyid + event.target.dataset.legislationid);
+      console.log(b);
+      const editForm = document.getElementById('edit-form')
+      editForm.querySelectorAll('input[name="body_id"]')[0].value = b.BodyID;
+      editForm.querySelectorAll('input[name="legislation_id"]')[0].value = b.LegislationID;
+      editForm.querySelectorAll('input[name="legislation_url"]')[0].value = b.Legislation.URL;
+      editForm.querySelectorAll('.legislation-id>a')[0].textContent = b.Legislation.DisplayID;
+      editForm.querySelectorAll('.legislation-id>a')[0].href = b.Legislation.URL;
+      editForm.querySelectorAll('.legislation-title')[0].textContent = b.Legislation.Title;
+      editForm.querySelectorAll('.legislation-url>a')[0].textContent = b.Legislation.URL;
+      editForm.querySelectorAll('.legislation-url>a')[0].href = b.Legislation.URL;
+      editForm.querySelectorAll('textarea')[0].value = b.Notes;
+      editForm.querySelectorAll('input[name="tags"]')[0].value = b.Tags === null ? "": b.Tags.join(' ');
+      editForm.querySelectorAll('input[name="support"]')[0].checked = b.Oppose;
+    })
+  })
+
+
+document.getElementById('edit-remove').addEventListener("click", _ => {
+  event.preventDefault()
+  const editForm = document.getElementById('edit-form')
+  const formData = new FormData();
+  formData.append('body_id', editForm.elements["body_id"].value);
+  formData.append('legislation_id',  editForm.elements["legislation_id"].value);
+  formData.append('profile_id', editForm.elements["profile_id"].value);
+
+  fetch("/data/profile", {
+    method:"DELETE",
+    body: formData,
+    redirect: "manual"
+    // body: JSON.stringify({
+    //   editForm.elements["body-id"]
+    // }),
+  }) // .then(response => console.log(response.json()))
+  .then(_ => {document.location.reload()})
+
+})
+
+</script>
+{{end}}
+

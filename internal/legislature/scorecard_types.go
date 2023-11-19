@@ -62,16 +62,29 @@ func (s Score) Score() int {
 }
 
 func (s Score) CSS() string {
+	if s.Desired {
+		switch strings.ToLower(s.Status) {
+		case "affirmative", "aye", "sponsor":
+			return "affirmative"
+		case "negative", "nay":
+			return "negative"
+		case "":
+			return ""
+		default:
+			return "excused"
+		}
+	}
 	switch strings.ToLower(s.Status) {
 	case "affirmative", "aye", "sponsor":
-		return "affirmative"
-	case "negative", "nay":
 		return "negative"
+	case "negative", "nay":
+		return "affirmative"
 	case "":
 		return ""
 	default:
 		return "excused"
 	}
+
 }
 
 func (c ScoredBookmark) PercentCorrect() float64 {
