@@ -113,7 +113,10 @@ body {
 {{end}}
 
 <div class="row">
-  <p>{{len .Bookmarks}} supported bills in current legislative sessions.</p>
+  <p>{{if .Bookmarks.CountSupported}}{{.Bookmarks.CountSupported}} supported bills {{end}}
+    {{if ne .Bookmarks.CountSupported (len .Bookmarks)}}and{{end}} 
+    {{if .Bookmarks.CountOpposed}}{{.Bookmarks.CountOpposed}} opposed bills {{end}}
+     in current legislative sessions.</p>
 </div>
 {{end}}
 

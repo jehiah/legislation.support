@@ -77,6 +77,24 @@ func (b Bookmarks) Active() Bookmarks {
 	}
 	return out
 }
+func (b Bookmarks) CountSupported() int {
+	var n int
+	for _, bb := range b {
+		if !bb.Oppose {
+			n++
+		}
+	}
+	return n
+}
+func (b Bookmarks) CountOpposed() int {
+	var n int
+	for _, bb := range b {
+		if bb.Oppose {
+			n++
+		}
+	}
+	return n
+}
 
 func (b Bookmarks) Bodies() []legislature.BodyID {
 	l := make(map[legislature.BodyID]bool)
