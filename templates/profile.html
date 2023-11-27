@@ -76,6 +76,9 @@
     <div class="notes">{{.Notes}}</div>
     {{end}}
     <div class="tags">
+      {{if .Oppose}}
+      <div class="oppose tag">Oppose</div>
+      {{end}}
       <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
       {{if .Legislation.Session}}
       <div class="session tag" >session:{{.Legislation.Session}}</div>
@@ -108,6 +111,9 @@
     <div class="notes">{{.Notes}}</div>
     {{end}}
     <div class="tags">
+      {{if .Oppose}}
+      <div class="oppose tag">Oppose</div>
+      {{end}}
       <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
       {{if .Legislation.Session}}
       <div class="session tag" >session:{{.Legislation.Session}}</div>
