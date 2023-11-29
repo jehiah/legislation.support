@@ -93,9 +93,7 @@ func (c ScoredBookmark) PercentCorrect() float64 {
 	}
 	have := 0
 	for _, s := range c.Scores {
-		if s.Score() == 1 {
-			have++
-		}
+		have += s.Score()
 	}
 	return (float64(have) / float64(len(c.Scores))) * 100
 }
@@ -106,9 +104,7 @@ func (c Scorecard) PercentCorrect(idx int) float64 {
 	}
 	have := 0
 	for _, cc := range c.Data {
-		if cc.Scores[idx].Score() == 1 {
-			have++
-		}
+		have += cc.Scores[idx].Score()
 	}
 	return (float64(have) / float64(len(c.Data))) * 100
 }
