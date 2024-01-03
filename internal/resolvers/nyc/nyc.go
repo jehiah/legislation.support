@@ -15,6 +15,7 @@ import (
 )
 
 var Sessions = legislature.Sessions{
+	{2024, 2025},
 	{2022, 2023},
 	{2018, 2021},
 	{2014, 2017},
