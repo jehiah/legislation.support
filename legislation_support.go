@@ -57,6 +57,7 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"ToLower": strings.ToLower,
 		"Comma":   commaInt,
 		"Time":    humanize.Time,
+		"Join":    strings.Join,
 	}
 	t := template.New("empty").Funcs(funcMap)
 	if n == "error.html" {

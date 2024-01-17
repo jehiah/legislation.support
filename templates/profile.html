@@ -27,6 +27,9 @@
   color: var(--grey-dark);
   border-left: solid 4px var(--grey-light-2);
 }
+.bookmark.hidden {
+  display: none;
+}
 </style>
 {{end}}
 {{define "middle"}}
@@ -66,7 +69,7 @@
 {{end}}
 
 {{range .Bookmarks}}
-  <div class="row bookmark">
+  <div class="row bookmark" data-tags="{{Join .Tags "|"}}">
     <div class="row1">
 
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
@@ -103,7 +106,7 @@
     <h3>Archived</h3>
   </div>
   {{range .ArchivedBookmarks}}
-  <div class="row bookmark">
+  <div class="row bookmark" data-tags="{{Join .Tags "|"}}">
     <div class="row1">
     <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
     <div class="legislation-title">{{.Legislation.Title}}</div>
@@ -128,4 +131,19 @@
 {{end}}
 </div>
 
+{{end}}
+
+{{define "javascript"}}
+<script type="module">
+  const qs = new URLSearchParams(window.location.search)
+  const tags = new Set(qs.getAll("tag"))
+  if (tags.length > 0) {
+    Array.from(document.getElementsByClassName("bookmark")).forEach(element => {
+    const eTags = (element.dataset.tags ? element.dataset.tags : "").split("|")
+    const hasTag = eTags.find(t => tags.has(t))
+    element.classList.toggle("hidden", !hasTag)
+  });
+  }
+
+</script>
 {{end}}
