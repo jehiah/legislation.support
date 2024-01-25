@@ -112,6 +112,13 @@ func (a *App) CreateProfile(ctx context.Context, p account.Profile) error {
 	return err
 }
 
+func (a *App) UpdateProfile(ctx context.Context, p account.Profile) error {
+	p.LastModified = time.Now().UTC()
+	log.Printf("updated profile %#v", p)
+	_, err := a.firestore.Collection("profiles").Doc(string(p.ID)).Set(ctx, p)
+	return err
+}
+
 func (a *App) SaveBookmark(ctx context.Context, p account.ProfileID, b account.Bookmark) error {
 	b.LastModified = time.Now().UTC()
 	_, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(b.Key()).Create(ctx, b)

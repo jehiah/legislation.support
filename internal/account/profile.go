@@ -13,10 +13,11 @@ type UID string // A globally unique User ID
 type ProfileID string
 
 type Profile struct {
-	Name    string
-	ID      ProfileID
-	Private bool
-	UID     UID
+	Name        string
+	Description string
+	ID          ProfileID
+	Private     bool
+	UID         UID
 
 	Created      time.Time
 	LastModified time.Time

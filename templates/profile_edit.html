@@ -35,12 +35,24 @@ body {
 #edit-form .legislation-url {
   font-size:.75rem;
 }
+.edit-profile {
+  color: var(--brand-dark);
+  text-decoration: none;
+  font-size:1rem;
+}
+.edit-profile:hover {
+  color: var(--brand-medium);
+}
 </style>
 {{end}}
 {{define "middle"}}
 
 <div class="row">
-<h2 class="profile-name">{{.Profile.Name}}</h2>
+<h2 class="profile-name">{{.Profile.Name}} <a href="#" class="edit-profile"><i class="bi bi-pencil-square"></i>
+</a></h2>
+{{ if .Profile.Description }}
+  <div class="profile-description"><a href="#" class="edit-profile float-end"><i class="bi bi-pencil-square"></i></a>{{.Profile.Description | markdown}}</div>
+{{ end }}
 </div>
 
 <!-- <div class="row">
@@ -192,9 +204,32 @@ body {
   </div>
   <div class="offcanvas-body">
 
+    <form id="edit-profile" action="/data/profile" method="post" novalidate class="needs-validation">
+      <input type="hidden" name="profile_id" value="{{.Profile.ID}}">
+
+      <div class="form-floating mt-2 mb-1">
+        <input type="text" name="name" class="form-control" id="profile-name" value="{{.Profile.Name}}" required maxlength="128">
+        <label>Profile Name</label>
+      </div>
+
+      <div class="form-floating mt-2 mb-1">
+        <textarea class="form-control" name="description" style="height: 8em;" maxlength="4096">{{.Profile.Description}}</textarea>
+        <label>Description</label>
+      </div>
+
+      <div class="form-check form-switch mt-2 mb-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="edit-private" name="private" value="on" {{if .Profile.Private}}checked{{end}}>
+        <label class="form-check-label" for="edit-oppose">Private</label>
+      </div>    
 
 
-    <form id="edit-form" action="/data/profile" method="post">
+      <div class="mb-1 mt-3 text-bg-light p-3 text-end">
+        <button type="submit" name="submit" value="save" class="btn btn-primary">Save</button>
+      </div>
+  
+    </form>
+
+    <form id="edit-form" action="/data/profile" method="post" novalidate class="needs-validation">
       <input type="hidden" name="body_id">
       <input type="hidden" name="legislation_id">
       <input type="hidden" name="legislation_url">
@@ -203,10 +238,11 @@ body {
       <div class="legislation-id"><a href=""></a></div>
       <div class="legislation-title"></div>
       <div class="legislation-url mt-1"><a href=""></a></div>
-      
+
+        
     <div class="form-floating mt-2 mb-2">
       <textarea class="form-control" placeholder="" name="notes" style="height: 4em;"></textarea>
-      <label for="floatingNotes">Notes</label>
+      <label>Notes</label>
     </div>
     
     <div class="row g-3 align-items-center mb-2">
@@ -256,16 +292,42 @@ body {
     document.getElementById('notes-row').style.display=''
   })
 
+// Loop over them and prevent submission
+Array.from(document.querySelectorAll('.needs-validation')).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+
+      form.classList.add('was-validated')
+    }, false)
+  })
+
   const bsOffcanvas = new bootstrap.Offcanvas('#offcanvasRight')
 
-  const editLinks = document.querySelectorAll("a.edit")
-  const editLinksList = [...editLinks].map(el => {
+  const editProfileLinks = document.querySelectorAll("a.edit-profile")
+ const editProfileLinksEl = [...editProfileLinks].forEach(el => {
     el.addEventListener("click", event => {
       event.preventDefault()
+      document.getElementById('edit-form').style.display = 'none'
+      bsOffcanvas.show()
+      const editForm = document.getElementById('edit-profile')
+      editForm.style.display = ''
+    })
+  })
+  
+
+  const editLinks = document.querySelectorAll("a.edit")
+  const editLinksEl = [...editLinks].forEach(el => {
+    el.addEventListener("click", event => {
+      event.preventDefault()
+      document.getElementById('edit-profile').style.display = 'none'
       bsOffcanvas.show()
       const b = bookmarks.get(event.target.dataset.bodyid + event.target.dataset.legislationid);
-      console.log(b);
+      // console.log(b);
       const editForm = document.getElementById('edit-form')
+      editForm.style.display = ''
       editForm.querySelectorAll('input[name="body_id"]')[0].value = b.BodyID;
       editForm.querySelectorAll('input[name="legislation_id"]')[0].value = b.LegislationID;
       editForm.querySelectorAll('input[name="legislation_url"]')[0].value = b.Legislation.URL;

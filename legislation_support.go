@@ -22,10 +22,12 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
 	"github.com/dustin/go-humanize"
+	"github.com/gomarkdown/markdown"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
+	"github.com/microcosm-cc/bluemonday"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -52,12 +54,19 @@ func commaInt(i int) string {
 	return humanize.Comma(int64(i))
 }
 
+func Markdown(md string) template.HTML {
+	maybeUnsafeHTML := markdown.ToHTML([]byte(md), nil, nil)
+	html := bluemonday.UGCPolicy().SanitizeBytes(maybeUnsafeHTML)
+	return template.HTML(html)
+}
+
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
-		"ToLower": strings.ToLower,
-		"Comma":   commaInt,
-		"Time":    humanize.Time,
-		"Join":    strings.Join,
+		"ToLower":  strings.ToLower,
+		"Comma":    commaInt,
+		"Time":     humanize.Time,
+		"Join":     strings.Join,
+		"markdown": Markdown,
 	}
 	t := template.New("empty").Funcs(funcMap)
 	if n == "error.html" {
@@ -328,6 +337,33 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	switch {
+	case strings.TrimSpace(r.Form.Get("legislation_url")) != "":
+		err = a.ProfilePostURL(ctx, profileID, r)
+	case strings.TrimSpace(r.Form.Get("name")) != "":
+		err = a.ProfileEdit(ctx, *profile, r)
+	}
+
+	if err != nil {
+		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
+		a.WebInternalError500(w, "")
+		return
+	}
+	http.Redirect(w, r, profile.Link(), 302)
+}
+
+func (a *App) ProfileEdit(ctx context.Context, p account.Profile, r *http.Request) error {
+	p.Name = strings.TrimSpace(r.Form.Get("name"))
+	if p.Name == "" {
+		return fmt.Errorf("name required")
+	}
+	p.Description = strings.TrimSpace(r.Form.Get("description"))
+	p.Private = r.Form.Get("private") == "on"
+	return a.UpdateProfile(ctx, p)
+}
+
+func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r *http.Request) error {
+	uid := a.User(r)
 	g := new(errgroup.Group)
 	// support multiple URL's
 	for _, legUrl := range strings.Fields(strings.TrimSpace(r.Form.Get("legislation_url"))) {
@@ -391,13 +427,8 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 	}
+	return g.Wait()
 
-	if err = g.Wait(); err != nil {
-		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		a.WebInternalError500(w, "")
-		return
-	}
-	http.Redirect(w, r, profile.Link(), 302)
 }
 
 // ProfileRemove removes a bookmark from a profile

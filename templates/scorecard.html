@@ -116,6 +116,9 @@ table.table-scorecard tbody tr th:first-child {
 
 <div class="row">
 <h2 class="profile-name">{{.Profile.Name}}</h2>
+{{ if .Profile.Description }}
+  <div class="profile-description">{{.Profile.Description | markdown}}</div>
+{{ end }}
 </div>
 
 
