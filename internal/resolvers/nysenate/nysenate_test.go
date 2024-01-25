@@ -45,6 +45,8 @@ func TestNYSenateLookup(t *testing.T) {
 	}
 	tests := []testCase{
 		{"https://www.nysenate.gov/legislation/bills/2019/s2892"},
+		{"https://www.nysenate.gov/legislation/bills/2023/s2714/"},
+		{"https://www.nysenate.gov/legislation/bills/2023/S1724/amendment/A"},
 		{"https://www.nysenate.gov/legislation/bills/2021/s4547/amendment/a"},
 	}
 	a := NewNYSenate(legislature.Body{}, os.Getenv("NY_SENATE_TOKEN"))
@@ -75,6 +77,7 @@ func TestNYAssemblyLookup(t *testing.T) {
 	tests := []testCase{
 		{"https://www.nysenate.gov/legislation/bills/2021/A4854"},
 		{"https://assembly.state.ny.us/leg/?default_fld=&bn=A04854&term=2021&Summary=Y&Actions=Y&Text=Y&Committee%26nbspVotes=Y&Floor%26nbspVotes=Y"},
+		{"https://nyassembly.gov/leg/?default_fld=&leg_video=&bn=A08273&term=2023&Summary=Y&Memo=Y&Chamber%26nbspVideo%2FTranscript=Y"},
 	}
 	a := NewNYAssembly(legislature.Body{}, os.Getenv("NY_SENATE_TOKEN"))
 	for i, tc := range tests {

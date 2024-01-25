@@ -67,8 +67,8 @@ func LegislationSort(a, b *legislature.Legislation) bool {
 	}
 }
 
-var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/amendment.*)?$")
-var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/amendment.*)?$")
+var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/|/amendment.*)?$")
+var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/|/amendment.*)?$")
 
 func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
@@ -101,7 +101,7 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 		}
 		log.Infof("found nysenate URL %s", u.String())
 		session, printNo = p[1], p[3]
-	case "assembly.state.ny.us":
+	case "assembly.state.ny.us", "nyassembly.gov":
 		if u.Path != "/leg/" {
 			return nil, nil
 		}
