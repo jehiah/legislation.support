@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -28,16 +27,16 @@ func (n NYC) LookupLegistarLegislationDetail(ctx context.Context, u *url.URL) (*
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("got status code %d", resp.StatusCode)
+	log.Printf("got status code %d for %s", resp.StatusCode, u.String())
 	defer resp.Body.Close()
 	if resp.StatusCode >= 500 {
-		return nil, fmt.Errorf("Got status code %d", resp.StatusCode)
+		return nil, fmt.Errorf("status code %d", resp.StatusCode)
 	}
 	if resp.StatusCode >= 400 {
 		return nil, nil
 	}
 	limitReader := io.LimitReader(resp.Body, 1024768)
-	body, err := ioutil.ReadAll(limitReader)
+	body, err := io.ReadAll(limitReader)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +53,8 @@ func (n NYC) LookupLegistarLegislationDetail(ctx context.Context, u *url.URL) (*
 			Host:   "intro.nyc",
 			Path:   "/" + fileNo,
 		}, nil
+	} else {
+		log.Printf("title not found")
 	}
 	return nil, nil
 }

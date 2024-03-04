@@ -175,6 +175,14 @@ func (a *App) WebError(w http.ResponseWriter, code int, msg string) {
 	}
 }
 
+type ProfileMetadata struct {
+	account.Profile
+
+	SupportedBills int
+	OpposedBills   int
+	ArchivedBills  int
+}
+
 func (a *App) Index(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := a.User(r)
@@ -187,19 +195,50 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request) {
 		Page     string
 		Title    string
 		UID      account.UID
-		Profiles []account.Profile
+		Profiles []ProfileMetadata
 	}
 	body := Page{
 		Title: "legislation.support",
 		UID:   uid,
 	}
-	var err error
-	body.Profiles, err = a.GetProfiles(ctx, uid)
+
+	profiles, err := a.GetProfiles(ctx, uid)
 	if err != nil {
 		log.Print(err)
 		a.WebInternalError500(w, "")
 		return
 	}
+
+	for _, p := range profiles {
+		profile := ProfileMetadata{
+			Profile: p,
+		}
+		b, err := a.GetProfileBookmarks(ctx, p.ID)
+		if err != nil {
+			log.WithField("uid", uid).WithField("profileID", p.ID).Errorf("%#v", err)
+			a.WebInternalError500(w, "")
+			return
+		}
+		for _, bb := range b {
+			if bb.LastModified.After(profile.LastModified) {
+				profile.LastModified = bb.LastModified
+			}
+			if bb.Legislation.Session.Active() {
+				if bb.Oppose {
+					profile.OpposedBills++
+				} else {
+					profile.SupportedBills++
+				}
+			} else {
+				profile.ArchivedBills++
+			}
+		}
+		body.Profiles = append(body.Profiles, profile)
+	}
+
+	sort.Slice(body.Profiles, func(i, j int) bool {
+		return body.Profiles[i].LastModified.After(body.Profiles[j].LastModified)
+	})
 
 	t := newTemplate(a.templateFS, "profiles.html")
 	err = t.ExecuteTemplate(w, "profiles.html", body)
