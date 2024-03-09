@@ -220,7 +220,23 @@ body {
       <div class="form-check form-switch mt-2 mb-1">
         <input class="form-check-input" type="checkbox" role="switch" id="edit-private" name="private" value="on" {{if .Profile.Private}}checked{{end}}>
         <label class="form-check-label" for="edit-oppose">Private</label>
-      </div>    
+      </div>
+
+      <h4>Scorecard Options</h4>
+
+      <div class="form-check form-switch mt-2 mb-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="edit-district" name="hide_district" value="on" {{if .Profile.HideDistrict}}checked{{end}}>
+        <label class="form-check-label" for="edit-district">Hide District</label>
+      </div>
+
+      <div class="form-check form-switch mt-2 mb-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="edit-bill-status" name="hide_bill_status" value="on" {{if .Profile.HideBillStatus}}checked{{end}}>
+        <label class="form-check-label" for="edit-bill-status">Hide Bill Status Header</label>
+      </div>
+      <div class="form-check form-switch mt-2 mb-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="edit-support-oppose" name="hide_support_oppose" value="on" {{if .Profile.HideSupportOppose}}checked{{end}}>
+        <label class="form-check-label" for="edit-support-oppose">Hide Support/Oppose Header</label>
+      </div>
 
 
       <div class="mb-1 mt-3 text-bg-light p-3 text-end">

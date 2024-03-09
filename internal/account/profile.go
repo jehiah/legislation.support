@@ -23,6 +23,7 @@ type Profile struct {
 	LastModified time.Time
 
 	// Colors?
+	ScorecardOptions
 }
 
 func (p Profile) HasAccess(u UID) bool {

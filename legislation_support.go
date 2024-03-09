@@ -398,6 +398,9 @@ func (a *App) ProfileEdit(ctx context.Context, p account.Profile, r *http.Reques
 	}
 	p.Description = strings.TrimSpace(r.Form.Get("description"))
 	p.Private = r.Form.Get("private") == "on"
+	p.HideDistrict = r.Form.Get("hide_district") == "on"
+	p.HideSupportOppose = r.Form.Get("hide_support_oppose") == "on"
+	p.HideBillStatus = r.Form.Get("hide_bill_status") == "on"
 	return a.UpdateProfile(ctx, p)
 }
 

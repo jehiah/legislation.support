@@ -53,10 +53,10 @@ td.score {
 td.sponsor {
   background-color: #0f0;
 }
-td.affirmative {
+td.affirmative, th.affirmative {
   background-color: #0f0;
 }
-td.negative {
+td.negative, th.negative {
   background-color: #f00;
 }
 td.excused {
@@ -134,7 +134,7 @@ table.table-scorecard tbody tr th:first-child {
 <thead>
   <tr class="tablesorter-ignoreRow">
     <th></th>
-    <th></th>
+    {{ if not $.Profile.HideDistrict }} <th></th> {{end}}
     <th></th>
     {{range .Data}}
     <th><div class="legislation-title">{{.Legislation.Title}}</div></th>
@@ -142,23 +142,33 @@ table.table-scorecard tbody tr th:first-child {
   </tr>
   <tr class="tablesorter-ignoreRow">
     <th></th>
-    <th></th>
+    {{ if not $.Profile.HideDistrict }} <th></th>{{end}}
     <th></th>
     {{range .Data}}
     <th class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></th>
     {{end}}
   </tr>
+  {{ if not $.Profile.HideBillStatus }}
   <tr class="tablesorter-ignoreRow">
     <th></th>
-    <th></th>
+    {{ if not $.Profile.HideDistrict }}<th></th>{{end}}
     <th></th>
     {{range .Data}}
     <th><div class="status">{{.Status}}</div></th>
     {{end}}
   </tr>
+  {{ end }}
+  <tr class="tablesorter-ignoreRow">
+    <th></th>
+    {{ if not $.Profile.HideDistrict }} <th></th> {{end}}
+    <th></th>
+    {{range .Data}}
+    <th class="{{if .Oppose}}negative{{else}}affirmative{{end}}">{{if .Oppose}}Oppose{{else}}Support{{end}}</th>
+    {{end}}
+  </tr>
   <tr>
     <th data-sortInitialOrder="asc" class="text-nowrap">{{.Metadata.PersonTitle}}</th>
-    <th>District</th>
+    {{ if not $.Profile.HideDistrict }}<th>District</th>{{end}}
     <th class="text-nowrap">% Correct</th>
     {{range .Data}}
     <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
@@ -170,7 +180,7 @@ table.table-scorecard tbody tr th:first-child {
 {{range $i, $p := .People}} 
 <tr>
   <th class="full-name">{{$p.FullName}}</th>
-  <th class="district">{{$p.District}}</th>
+  {{ if not $.Profile.HideDistrict }}<th class="district">{{$p.District}}</th>{{end}}
   <td class="percent-correct number" data-percent="{{printf "%0.1f%%" ($S.PercentCorrect $i) }}">{{printf "%0.1f%%" ($S.PercentCorrect $i) }}</td>
   {{range $S.Data}}
     <td class="score {{(index .Scores $i).CSS}} " data-text="{{(index .Scores $i).Score}}">{{(index .Scores $i).Status}}</td>
