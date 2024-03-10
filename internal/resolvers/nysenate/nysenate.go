@@ -24,6 +24,11 @@ var Sessions = legislature.Sessions{
 	{2007, 2008},
 }
 
+type chamber string
+
+const senateChamber chamber = "senate"
+const assemblyChamber chamber = "assembly"
+
 type NYSenate struct {
 	body legislature.Body
 	api  *NYSenateAPI

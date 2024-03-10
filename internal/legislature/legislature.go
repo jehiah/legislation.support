@@ -65,6 +65,7 @@ type Resolver interface {
 	Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
 	Body() Body
 	Scorecard(context.Context, []Scorable) (*Scorecard, error)
+	Members(context.Context, Session) ([]Member, error)
 }
 type Resolvers []Resolver
 
@@ -110,7 +111,10 @@ type Session struct {
 	StartYear, EndYear int // inclusive
 }
 
-func (s Session) Active() bool   { return s.EndYear >= time.Now().UTC().Year() }
+func (s Session) Active() bool {
+	now := time.Now().UTC().Year()
+	return s.EndYear >= now && s.StartYear <= now
+}
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
 
 type Sessions []Session
@@ -123,4 +127,26 @@ func (s Sessions) Find(year int) Session {
 		}
 	}
 	return Session{}
+}
+func (s Session) Overlaps(start, end time.Time) bool {
+	sy, ey := start.Year(), end.Year()
+	switch {
+	case sy >= s.StartYear && sy <= s.EndYear:
+		return true
+	case ey >= s.StartYear && ey <= s.EndYear:
+		return true
+	case sy < s.StartYear && ey > s.EndYear:
+		return true
+	}
+	return false
+}
+
+type Member struct {
+	NumericID int
+	Slug      string
+	FullName  string
+	ShortName string
+	URL       string
+	District  string
+	// TODO: party?
 }

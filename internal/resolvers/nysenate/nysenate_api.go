@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/jehiah/legislation.support/internal/legislature"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -374,11 +375,12 @@ type MemberVotes struct {
 }
 
 // Note: response might have duplicates
-func (a NYSenateAPI) GetMembers(ctx context.Context, session, chamber string) ([]MemberShort, error) {
-	if session == "" || chamber == "" {
+func (a NYSenateAPI) GetMembers(ctx context.Context, session legislature.Session, c chamber) ([]legislature.Member, error) {
+	if session.StartYear == 0 || c == "" {
 		return nil, nil
 	}
-	path := fmt.Sprintf("/api/3/members/%s/%s", url.PathEscape(session), url.PathEscape(chamber))
+	sessionStr := fmt.Sprintf("%d", session.StartYear)
+	path := fmt.Sprintf("/api/3/members/%s/%s", url.PathEscape(sessionStr), url.PathEscape(string(c)))
 	// senate is 63, assembly is 150
 	params := &url.Values{"full": []string{"true"}, "limit": []string{"200"}}
 	var data MemberListResponse
@@ -386,19 +388,20 @@ func (a NYSenateAPI) GetMembers(ctx context.Context, session, chamber string) ([
 	if err != nil {
 		return nil, err
 	}
-	var out []MemberShort
+	var out []legislature.Member
 	for _, m := range data.Result.Items {
-		out = append(out, m.Short())
+		out = append(out, m.Member())
 		for memberSession, mm := range m.Sessions {
 			for _, mmm := range mm {
 				// could have a different short name for this session
 				// i.e. 2021: BICHOTTE, BICHOTTE HERMELYN
-				if memberSession == session && mmm.ShortName != m.ShortName {
-					out = append(out, MemberShort{
-						MemberID:  m.MemberID,
+				if memberSession == sessionStr && mmm.ShortName != m.ShortName {
+					out = append(out, legislature.Member{
+						NumericID: m.MemberID,
+						// Slug:        fmt.Sprintf("%d", m.MemberID),
 						FullName:  m.FullName,
 						ShortName: mmm.ShortName,
-						District:  mmm.DistrictCode,
+						District:  fmt.Sprintf("%d", mmm.DistrictCode),
 					})
 				}
 			}
@@ -463,18 +466,12 @@ type Person struct {
 	ImgName    string      `json:"imgName"`
 }
 
-func (m MemberSession) Short() MemberShort {
-	return MemberShort{
-		MemberID:  m.MemberID,
+func (m MemberSession) Member() legislature.Member {
+	return legislature.Member{
+		NumericID: m.MemberID,
+		// Slug:        fmt.Sprintf("%d", m.MemberID),
 		FullName:  m.FullName,
 		ShortName: m.ShortName,
-		District:  m.DistrictCode,
+		District:  fmt.Sprintf("%d", m.DistrictCode),
 	}
-}
-
-type MemberShort struct {
-	MemberID  int
-	FullName  string
-	ShortName string
-	District  int
 }

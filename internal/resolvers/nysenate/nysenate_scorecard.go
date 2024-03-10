@@ -23,33 +23,31 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 		Data: make([]legislature.ScoredBookmark, len(bookmarks)),
 	}
 
-	var chamber string
+	var c chamber
 	switch body.ID {
 	case "nysenate", "ny-senate":
-		chamber = "senate"
+		c = senateChamber
 		s.Metadata.PersonTitle = "Senator"
 	case "ny-assembly":
-		chamber = "assembly"
+		c = assemblyChamber
 		s.Metadata.PersonTitle = "Assembly Member"
 	default:
-		return nil, fmt.Errorf("invalid chamber %q", chamber)
+		return nil, fmt.Errorf("invalid chamber %s", body.ID)
 	}
 
-	people, err := a.GetMembers(ctx, strconv.Itoa(Sessions.Current().StartYear), chamber)
+	people, err := a.GetMembers(ctx, Sessions.Current(), c)
 	if err != nil {
 		return nil, err
 	}
 	seenPeople := make(map[int]bool)
 	for _, p := range people {
-		if seenPeople[p.MemberID] {
+		if seenPeople[p.NumericID] {
 			continue
 		}
-		seenPeople[p.MemberID] = true
+		seenPeople[p.NumericID] = true
 		s.People = append(s.People, legislature.ScorecardPerson{
 			FullName: p.FullName,
-			District: strconv.Itoa(p.District),
-			// URL:      "https://intro.nyc/councilmembers/" + p.Slug,
-			// TODO: Party
+			District: p.District,
 		})
 	}
 
@@ -106,7 +104,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 			}
 
 			// FIXME: https://github.com/nysenate/OpenLegislation/issues/122
-			if chamber == "assembly" && orginalBill.BillType.Chamber == "ASSEMBLY" {
+			if c == assemblyChamber && orginalBill.BillType.Chamber == "ASSEMBLY" {
 				extraVotes, err := a.AssemblyVotes(ctx, people, strconv.Itoa(orginalBill.Session), orginalBill.BasePrintNo)
 				if err != nil {
 					return err
@@ -133,12 +131,12 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 
 			seenPeople := make(map[int]bool)
 			for _, p := range people {
-				if seenPeople[p.MemberID] {
+				if seenPeople[p.NumericID] {
 					continue
 				}
-				seenPeople[p.MemberID] = true
-				delete(remaining, p.MemberID)
-				sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.MemberID], Desired: !sb.Oppose})
+				seenPeople[p.NumericID] = true
+				delete(remaining, p.NumericID)
+				sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.NumericID], Desired: !sb.Oppose})
 			}
 			for id := range remaining {
 				if id != 0 {

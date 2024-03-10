@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/jehiah/legislation.support/internal/legislature"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/html"
 )
@@ -16,7 +17,7 @@ import (
 // see https://github.com/nysenate/OpenLegislation/issues/122
 //
 // https://nyassembly.gov/leg/?default_fld=&leg_video=&bn=A09275&term=2021&Committee%26nbspVotes=Y&Floor%26nbspVotes=Y
-func (a NYSenateAPI) AssemblyVotes(ctx context.Context, members []MemberShort, session, printNo string) (*Bill, error) {
+func (a NYSenateAPI) AssemblyVotes(ctx context.Context, members []legislature.Member, session, printNo string) (*Bill, error) {
 	u := "https://nyassembly.gov/leg/?" + url.Values{
 		"default_fld":         []string{""},
 		"leg_video":           []string{""},
@@ -41,10 +42,10 @@ func (a NYSenateAPI) AssemblyVotes(ctx context.Context, members []MemberShort, s
 	return &bill, err
 }
 
-func parseAssemblyVotes(r io.Reader, members []MemberShort) ([]BillVote, error) {
+func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, error) {
 	memberLookup := make(map[string]int)
 	for _, m := range members {
-		memberLookup[m.ShortName] = m.MemberID
+		memberLookup[m.ShortName] = m.NumericID
 	}
 	var out []BillVote
 	z := html.NewTokenizer(r)

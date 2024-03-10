@@ -90,6 +90,17 @@ func (n NYC) ActivePeople(ctx context.Context) ([]db.Person, error) {
 	return people, err
 }
 
+func (n NYC) AllPeople(ctx context.Context) ([]db.Person, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/data/people_all.json",
+	}
+	var people []db.Person
+	err := n.get(ctx, u.String(), &people)
+	return people, err
+}
+
 type PersonMetadata struct {
 	ID       int
 	District int
