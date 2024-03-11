@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -295,8 +296,6 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.ProfileID) {
-	templateName := "profile.html"
-	t := newTemplate(a.templateFS, "profile.html")
 	ctx := r.Context()
 	uid := a.User(r)
 
@@ -315,10 +314,17 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 		a.WebPermissionError403(w, "")
 		return
 	}
+	a.ShowProfile(w, ctx, uid, profile, Message{})
+}
+func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, uid account.UID, profile *account.Profile, message Message) {
+	templateName := "profile.html"
+	t := newTemplate(a.templateFS, "profile.html")
+	profileID := profile.ID
 
 	type Page struct {
 		Page              string
 		Title             string
+		Message           Message
 		UID               account.UID
 		Profile           account.Profile
 		EditMode          bool
@@ -326,6 +332,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 		ArchivedBookmarks account.Bookmarks
 	}
 	body := Page{
+		Message:  message,
 		Title:    profile.Name + " (legislation.support)",
 		Profile:  *profile,
 		EditMode: uid == profile.UID,
@@ -360,6 +367,11 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.
 	}
 }
 
+type Message struct {
+	Success string
+	Error   string
+}
+
 // ProfilePost handles the add of a new URL to a profile, or update of a profile
 func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -387,7 +399,16 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case strings.TrimSpace(r.Form.Get("legislation_url")) != "":
-		err = a.ProfilePostURL(ctx, profileID, r)
+		var msg Message
+		added, err := a.ProfilePostURL(ctx, profileID, r)
+		if added > 0 {
+			msg.Success = fmt.Sprintf("Added %d", added)
+		}
+		if err != nil {
+			msg.Error = err.Error()
+		}
+		a.ShowProfile(w, ctx, uid, profile, msg)
+		return
 	case strings.TrimSpace(r.Form.Get("name")) != "":
 		err = a.ProfileEdit(ctx, *profile, r)
 	}
@@ -413,10 +434,12 @@ func (a *App) ProfileEdit(ctx context.Context, p account.Profile, r *http.Reques
 	return a.UpdateProfile(ctx, p)
 }
 
-func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r *http.Request) error {
+func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r *http.Request) (int64, error) {
 	uid := a.User(r)
 	g := new(errgroup.Group)
 	// support multiple URL's
+	var added int64
+
 	for _, legUrl := range strings.Fields(strings.TrimSpace(r.Form.Get("legislation_url"))) {
 		legUrl := legUrl
 
@@ -456,6 +479,7 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 				if err != nil {
 					return err
 				}
+				atomic.AddInt64(&added, 1)
 				return nil
 			}
 
@@ -469,13 +493,16 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 				Notes:         strings.TrimSpace(r.Form.Get("notes")),
 				Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
 			})
-			if err != nil && !IsAlreadyExists(err) {
+			if err != nil && IsAlreadyExists(err) {
 				return nil
+			} else if err == nil {
+				// results
+				atomic.AddInt64(&added, 1)
 			}
 			return nil
 		})
 	}
-	return g.Wait()
+	return added, g.Wait()
 
 }
 

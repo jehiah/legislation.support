@@ -59,6 +59,34 @@ body {
   <p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
 </div> -->
 
+{{ if .Message.Success }}
+<div class="row" id="message-success">
+  <div class="alert alert-success d-flex align-items-center" role="alert">
+    <i class="bi bi-check2-circle text-success"></i>
+    <div>{{.Message.Success}}</div>
+  </div>
+</div>
+<script type="module">
+  setTimeout(() => {
+  document.getElementById("message-success").remove()
+}, 1000 * 10);
+</script>
+{{end }}
+
+{{ if .Message.Error }}
+<div class="row" id="message-error">
+  <div class="alert alert-danger d-flex align-items-center" role="alert">
+    <i class="bi bi-check2-circle text-danger"></i>
+    <div>{{.Message.Error}}</div>
+  </div>
+</div>
+<script type="module">
+  setTimeout(() => {
+  document.getElementById("message-error").remove()
+}, 1000 * 10);
+</script>
+{{end }}
+
 <div class="row">
 
 <div class="col-12 col-md-8 mb-5 mt-2">
