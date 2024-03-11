@@ -18,6 +18,11 @@ func (a NYAssembly) Scorecard(ctx context.Context, bookmarks []legislature.Scora
 	return a.api.Scorecard(ctx, a.body, bookmarks)
 }
 
+func splitLegislationID(l legislature.LegislationID) (string, string) {
+	session, basePrint, _ := strings.Cut(string(l), "-")
+	return session, basePrint
+}
+
 func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookmarks []legislature.Scorable) (*legislature.Scorecard, error) {
 	s := &legislature.Scorecard{
 		Data: make([]legislature.ScoredBookmark, len(bookmarks)),
@@ -76,8 +81,8 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 				// lookup same as; if exists in the same body, use that
 				if sameAs := orginalBill.GetSameAs(); sameAs != "" {
 					log.Printf("[%d] substituting %s (%s) sameAs => %s", i, sb.Legislation.ID, sb.Legislation.DisplayID, sameAs)
-					basePrintNo = sameAs
-					orginalBill, err = a.GetBill(ctx, billSession, basePrintNo)
+					sameAsSession, sameAsBasePrintNo := splitLegislationID(sameAs)
+					orginalBill, err = a.GetBill(ctx, sameAsSession, sameAsBasePrintNo)
 					if err != nil {
 						return err
 					}
@@ -90,7 +95,8 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 			}
 
 			if sameAs := orginalBill.GetSameAs(); sameAs != "" {
-				sb.Legislation.DisplayID += " / " + sameAs
+				_, sameAsBasePrintNo := splitLegislationID(sameAs)
+				sb.Legislation.DisplayID += " / " + sameAsBasePrintNo
 			}
 			votedBill := orginalBill
 

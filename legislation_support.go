@@ -60,6 +60,12 @@ func Markdown(md string) template.HTML {
 	return template.HTML(html)
 }
 
+func LegislationLink(b legislature.BodyID, l legislature.LegislationID) template.URL {
+	return template.URL(resolvers.Resolvers.Find(b).Link(l).String())
+}
+func LegislationDisplayID(b legislature.BodyID, l legislature.LegislationID) string {
+	return resolvers.Resolvers.Find(b).DisplayID(l)
+}
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
 		"ToLower":  strings.ToLower,
@@ -67,6 +73,9 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"Time":     humanize.Time,
 		"Join":     strings.Join,
 		"markdown": Markdown,
+		// "Resolver": resolvers.Resolvers.Find,
+		"LegislationLink":      LegislationLink,
+		"LegislationDisplayID": LegislationDisplayID,
 	}
 	t := template.New("empty").Funcs(funcMap)
 	if n == "error.html" {
@@ -427,13 +436,10 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 				return fmt.Errorf("Legislation matching url %q not found", u)
 			}
 
+			// Save refreshes a bill as well
 			err = a.SaveBill(ctx, *bill)
 			if err != nil {
-				if IsAlreadyExists(err) {
-					a.UpdateBill(ctx, *bill)
-				} else {
-					return err
-				}
+				return err
 			}
 
 			bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))

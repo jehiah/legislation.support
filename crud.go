@@ -10,6 +10,7 @@ import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/iterator"
 )
 
@@ -158,27 +159,32 @@ func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) 
 
 func (a *App) UpdateBill(ctx context.Context, b legislature.Legislation) error {
 
-	b.LastModified = time.Now().UTC()
-	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
+	b.LastChecked = time.Now().UTC()
+	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, b)
 	// TODO: handle duplicates
 	return err
 }
 
 func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
 	b.Added = time.Now().UTC()
-	b.LastModified = time.Now().UTC()
+	b.LastChecked = time.Now().UTC()
 	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
 	if IsAlreadyExists(err) {
-		bb, err := a.GetBill(ctx, b.Body, b.ID)
+		var bb *legislature.Legislation
+		bb, err = a.GetBill(ctx, b.Body, b.ID)
 		if err != nil {
 			return err
 		}
 		bb.IntroducedDate = b.IntroducedDate
 		bb.LastModified = b.LastModified
+		bb.LastChecked = time.Now().UTC()
 		bb.Session = b.Session
 		bb.Title = b.Title
 		bb.Description = b.Description
 		bb.Summary = b.Summary
+		bb.Status = b.Status
+		bb.SameAs = b.SameAs
+		bb.SubstitutedBy = b.SubstitutedBy
 		// TODO: more
 		_, err = a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, *bb)
 
@@ -236,6 +242,36 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 			return nil, err
 		}
 		out[i].Legislation = &l
+	}
+
+	// if any bills are stale, refresh (some) of them - error should not be fatal
+	var wg errgroup.Group
+	updated := 0
+	for i := range out {
+		i := i
+		if out[i].Legislation != nil {
+			l := out[i].Legislation
+			// TODO: don't wait for these results
+			if l.IsStale() && updated < 15 {
+				updated++
+				log.Printf("%q is stale %v", l.ID, l.LastChecked)
+				wg.Go(func() error {
+					udpatedLeg, err := resolvers.Resolvers.Find(out[i].BodyID).Refresh(ctx, l.ID)
+					if err != nil {
+						return err
+					}
+					err = a.UpdateBill(ctx, *udpatedLeg)
+					if err != nil {
+						return err
+					}
+					out[i].Legislation = udpatedLeg
+					return nil
+				})
+			}
+		}
+	}
+	if err := wg.Wait(); err != nil {
+		log.Printf("err %s", err)
 	}
 
 	return out, nil

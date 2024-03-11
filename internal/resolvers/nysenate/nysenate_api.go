@@ -54,14 +54,27 @@ type BillResponse struct {
 	Bill         Bill   `json:"result"`
 }
 
+func (b Bill) ID() legislature.LegislationID {
+	return legislature.LegislationID(fmt.Sprintf("%d-%s", b.Session, b.BasePrintNo))
+}
+
 // GetSameAs will return A923 for S20 for the same session
-func (b Bill) GetSameAs() string {
+func (b Bill) GetSameAs() legislature.LegislationID {
 	for _, a := range b.Amendments.Items {
 		for _, i := range a.SameAs.Items {
 			if i.Session == b.Session {
-				return i.BasePrintNo
+				return legislature.LegislationID(fmt.Sprintf("%d-%s", i.Session, i.BasePrintNo))
 			}
 		}
+	}
+	return ""
+}
+
+// GetSubstitutedBy will return A923 for S20 for the same session
+func (b Bill) GetSubstitutedBy() legislature.LegislationID {
+	s := b.SubstitutedBy
+	if s.BasePrintNo != "" {
+		return legislature.LegislationID(fmt.Sprintf("%d-%s", s.Session, s.BasePrintNo))
 	}
 	return ""
 }

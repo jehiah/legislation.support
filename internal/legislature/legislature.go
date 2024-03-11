@@ -8,20 +8,6 @@ import (
 	"time"
 )
 
-type Status string
-
-const (
-	Introduced Status = "introduced"
-
-	// in-progress states
-	// ???
-
-	// terminal states
-	Withdrawn = "withdrawn"
-	Enacted   = "enacted"
-	Vetoed    = "vetoed"
-)
-
 // Legislation is uniquely known by an ID w/in a BODY
 type Legislation struct {
 	Body        BodyID
@@ -32,15 +18,36 @@ type Legislation struct {
 	Description string
 	URL         string
 	Session     Session
-	Status      Status
+	Status      string
+	// Committee ?
+	// Prime Sponsor
+
+	// for Bicameral legislatures
+	SameAs        LegislationID // the bill in the other house (if exists)
+	SubstitutedBy LegislationID // in some legislatures a bill is substituted for a bill in the other house
 
 	// status?
 	// dates?
 	IntroducedDate time.Time
+	LastModified   time.Time
 
 	// legislation.support dates
-	Added        time.Time
-	LastModified time.Time
+	Added       time.Time
+	LastChecked time.Time // when we last checked for updates
+}
+
+func (l Legislation) IsStale() bool {
+	if l.LastChecked.IsZero() {
+		return true
+	}
+	if !l.Session.Active() {
+		return false
+	}
+	// TODO: drop to 24hrs?
+	if l.LastChecked.Before(time.Now().Add(time.Hour * -24 * 7)) {
+		return true
+	}
+	return false
 }
 
 // func (l Legislation) Key() string {
@@ -52,20 +59,26 @@ type LegislationID string // i.e. 1234-456 (must not contain a '/')
 
 // Body represents a specific legislature
 type Body struct {
-	ID        BodyID
-	DisplayID string
-	Name      string
-	Location  string // ex: New York
-	URL       string
-	Bicameral BodyID                       // In a bicameral legislature, the other half
-	Sort      func(a, b *Legislation) bool `json:"-"`
+	ID         BodyID
+	DisplayID  string
+	Name       string
+	Location   string // ex: New York
+	URL        string
+	Bicameral  BodyID                       // In a bicameral legislature, the other half
+	UpperHouse bool                         // In a bicameral legislature, the upper house
+	Sort       func(a, b *Legislation) bool `json:"-"`
 }
 
 type Resolver interface {
 	Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
+	Refresh(context.Context, LegislationID) (*Legislation, error)
 	Body() Body
 	Scorecard(context.Context, []Scorable) (*Scorecard, error)
 	Members(context.Context, Session) ([]Member, error)
+	// Votes
+
+	Link(l LegislationID) *url.URL
+	DisplayID(l LegislationID) string
 }
 type Resolvers []Resolver
 

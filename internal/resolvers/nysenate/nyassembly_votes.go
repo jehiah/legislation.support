@@ -126,6 +126,8 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 				out = append(out, bv)
 			case "caption":
 				inCaption = false
+			case "html":
+				break
 			}
 		}
 	}

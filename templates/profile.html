@@ -71,7 +71,15 @@
   <div class="row bookmark" data-tags="{{Join .Tags "|"}}">
     <div class="row1">
 
-    <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
+    <div class="legislation-id">
+      {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
+      <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a> /
+      {{end}}
+      <a href="{{LegislationLink .BodyID .Legislation.ID}}">{{LegislationDisplayID .BodyID .Legislation.ID}}</a>
+      {{if and .Legislation.SameAs (.Body.UpperHouse) }}
+      / <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a>
+      {{end}}
+    </div>
     <div class="legislation-title">{{.Legislation.Title}}</div>
     </div>
     {{if .Notes}}
@@ -107,7 +115,15 @@
   {{range .ArchivedBookmarks}}
   <div class="row bookmark" data-tags="{{Join .Tags "|"}}">
     <div class="row1">
-    <div class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></div>
+    <div class="legislation-id">
+      {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
+      <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a> /
+      {{end}}
+      <a href="{{LegislationLink .BodyID .Legislation.ID}}">{{LegislationDisplayID .BodyID .Legislation.ID}}</a>
+      {{if and .Legislation.SameAs (.Body.UpperHouse) }}
+      / <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a>
+      {{end}}
+    </div>
     <div class="legislation-title">{{.Legislation.Title}}</div>
     </div>
     {{if .Notes}}

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
@@ -124,6 +125,30 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 	return bill.Legislation(a.body.ID), nil
 }
 
+func (a NYSenate) Refresh(ctx context.Context, billID legislature.LegislationID) (*legislature.Legislation, error) {
+	session, printNo, _ := strings.Cut(string(billID), "-")
+	if !strings.HasPrefix(printNo, "S") {
+		return nil, fmt.Errorf("invalid %q", billID)
+	}
+	bill, err := a.api.GetBill(ctx, session, printNo)
+	if err != nil {
+		return nil, err
+	}
+	return bill.Legislation(a.body.ID), nil
+}
+
+func (a NYAssembly) Refresh(ctx context.Context, billID legislature.LegislationID) (*legislature.Legislation, error) {
+	session, printNo, _ := strings.Cut(string(billID), "-")
+	if !strings.HasPrefix(printNo, "A") {
+		return nil, fmt.Errorf("invalid %q", billID)
+	}
+	bill, err := a.api.GetBill(ctx, session, printNo)
+	if err != nil {
+		return nil, err
+	}
+	return bill.Legislation(a.body.ID), nil
+}
+
 func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation {
 	if bill == nil {
 		return nil
@@ -135,16 +160,35 @@ func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation 
 		return nil
 	}
 	return &legislature.Legislation{
-		ID:             legislature.LegislationID(fmt.Sprintf("%d-%s", bill.Session, bill.BasePrintNo)),
+		ID:             bill.ID(),
 		Body:           body,
 		DisplayID:      bill.BasePrintNo,
 		Title:          bill.Title,
 		Summary:        bill.Summary,
 		IntroducedDate: t,
 		Session:        session,
+		SameAs:         bill.GetSameAs(),
+		SubstitutedBy:  bill.GetSubstitutedBy(),
 		URL:            fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
 	}
 }
+func (NYSenateAPI) Link(l legislature.LegislationID) *url.URL {
+	session, printNo := splitLegislationID(l)
+	return &url.URL{
+		Scheme: "https",
+		Host:   "www.nysenate.gov",
+		Path:   fmt.Sprintf("/legislation/bills/%s/%s", session, printNo),
+	}
+}
+func (a NYAssembly) Link(l legislature.LegislationID) *url.URL { return a.api.Link(l) }
+func (a NYSenate) Link(l legislature.LegislationID) *url.URL   { return a.api.Link(l) }
+
+func (NYSenateAPI) DisplayID(l legislature.LegislationID) string {
+	_, printNo := splitLegislationID(l)
+	return printNo
+}
+func (a NYAssembly) DisplayID(l legislature.LegislationID) string { return a.api.DisplayID(l) }
+func (a NYSenate) DisplayID(l legislature.LegislationID) string   { return a.api.DisplayID(l) }
 
 func NewAPI(token string) *NYSenateAPI {
 	if token == "" {

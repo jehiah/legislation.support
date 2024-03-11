@@ -70,13 +70,36 @@ func (n NYC) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, 
 	return nil, nil
 }
 
+func (n NYC) Refresh(ctx context.Context, id legislature.LegislationID) (*legislature.Legislation, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/" + n.DisplayID(id),
+	}
+	d, err := n.IntroJSON(ctx, u.String())
+	if err != nil {
+		return nil, err
+	}
+	return n.NewLegislation(d), nil
+}
+
 func (n NYC) Raw(ctx context.Context, l *legislature.Legislation) (*db.Legislation, error) {
 	u := &url.URL{
 		Scheme: "https",
 		Host:   "intro.nyc",
-		Path:   "/" + strings.TrimPrefix(string(l.ID), "Int "),
+		Path:   "/" + n.DisplayID(l.ID),
 	}
 	return n.IntroJSON(ctx, u.String())
+}
+func (n NYC) Link(l legislature.LegislationID) *url.URL {
+	return &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/" + n.DisplayID(l),
+	}
+}
+func (n NYC) DisplayID(l legislature.LegislationID) string {
+	return strings.TrimPrefix(string(l), "Int ")
 }
 
 func (n NYC) ActivePeople(ctx context.Context) ([]db.Person, error) {
@@ -130,6 +153,8 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 		Description:    d.Summary,
 		IntroducedDate: d.IntroDate,
 		Session:        Sessions.Find(d.IntroDate.Year()),
+		Status:         d.StatusName,
+		LastModified:   d.LastModified,
 		URL:            "https://intro.nyc/" + strings.TrimPrefix(d.File, "Int "),
 	}
 }

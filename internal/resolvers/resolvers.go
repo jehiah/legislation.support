@@ -18,13 +18,14 @@ var (
 		Sort:      legislature.GenericLegislationSort,
 	}
 	NYSenate = legislature.Body{
-		ID:        "nysenate",
-		Bicameral: "ny-assembly",
-		Name:      "NY Senate",
-		DisplayID: "NY-Senate",
-		Location:  "New York",
-		URL:       "https://www.nysenate.gov/",
-		Sort:      nysenate.LegislationSort,
+		ID:         "nysenate",
+		Bicameral:  "ny-assembly",
+		UpperHouse: true,
+		Name:       "NY Senate",
+		DisplayID:  "NY-Senate",
+		Location:   "New York",
+		URL:        "https://www.nysenate.gov/",
+		Sort:       nysenate.LegislationSort,
 	}
 	NYAssembly = legislature.Body{
 		ID:        "ny-assembly",
