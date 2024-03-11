@@ -201,8 +201,9 @@ table.table-scorecard tbody tr th:first-child {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="module">
 import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
+let sortColumn = {{ if $.Profile.HideDistrict }} 1 {{else}}2 {{end}};
 $("#data-table").tablesorter({
-  sortList:[[2,1],[0,0]],
+  sortList:[[sortColumn,1],[0,0]],
   theme: "bootstrap",
   sortInitialOrder:"desc",
   sortRestart: true
