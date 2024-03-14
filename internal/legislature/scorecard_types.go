@@ -31,6 +31,7 @@ type ScoredBookmark struct {
 }
 
 type Scorecard struct {
+	Body     *Body
 	Metadata ScorecardMetadata
 	People   []ScorecardPerson
 	Data     []ScoredBookmark

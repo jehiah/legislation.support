@@ -13,8 +13,9 @@ import (
 
 func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*legislature.Scorecard, error) {
 	s := &legislature.Scorecard{
+		Body: &a.body,
 		Metadata: legislature.ScorecardMetadata{
-			PersonTitle: "Council Member",
+			PersonTitle: a.body.MemberName,
 		},
 		Data: make([]legislature.ScoredBookmark, len(bookmarks)),
 	}

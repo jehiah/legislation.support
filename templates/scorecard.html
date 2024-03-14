@@ -145,7 +145,15 @@ table.table-scorecard tbody tr th:first-child {
     {{ if not $.Profile.HideDistrict }} <th></th>{{end}}
     <th></th>
     {{range .Data}}
-    <th class="legislation-id"><a href="{{.Legislation.URL}}">{{.Legislation.DisplayID}}</a></th>
+    <th class="legislation-id">
+      {{if and .Legislation.SameAs (not $S.Body.UpperHouse) }}
+      <a href="{{LegislationLink .Legislation.Body .Legislation.SameAs}}">{{LegislationDisplayID .Legislation.Body .Legislation.SameAs}}</a> /
+      {{end}}
+      <a href="{{LegislationLink .Legislation.Body .Legislation.ID}}">{{LegislationDisplayID .Legislation.Body .Legislation.ID}}</a>
+      {{if and .Legislation.SameAs ($S.Body.UpperHouse) }}
+      / <a href="{{LegislationLink .Legislation.Body .Legislation.SameAs}}">{{LegislationDisplayID .Legislation.Body .Legislation.SameAs}}</a>
+      {{end}}
+    </th>
     {{end}}
   </tr>
   {{ if not $.Profile.HideBillStatus }}

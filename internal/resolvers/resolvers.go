@@ -10,12 +10,13 @@ import (
 
 var (
 	NYCCouncil = legislature.Body{
-		ID:        "nyc",
-		Name:      "NYC City Council",
-		DisplayID: "NYC-Council",
-		Location:  "New York City",
-		URL:       "https://council.nyc.gov/",
-		Sort:      legislature.GenericLegislationSort,
+		ID:         "nyc",
+		Name:       "NYC City Council",
+		DisplayID:  "NYC-Council",
+		Location:   "New York City",
+		URL:        "https://council.nyc.gov/",
+		MemberName: "Council Member",
+		Sort:       legislature.GenericLegislationSort,
 	}
 	NYSenate = legislature.Body{
 		ID:         "nysenate",
@@ -25,16 +26,18 @@ var (
 		DisplayID:  "NY-Senate",
 		Location:   "New York",
 		URL:        "https://www.nysenate.gov/",
+		MemberName: "Assembly Member",
 		Sort:       nysenate.LegislationSort,
 	}
 	NYAssembly = legislature.Body{
-		ID:        "ny-assembly",
-		Bicameral: "nysenate",
-		Name:      "NY Assembly",
-		DisplayID: "NY-Assembly",
-		Location:  "New York",
-		URL:       "https://assembly.state.ny.us/",
-		Sort:      nysenate.LegislationSort,
+		ID:         "ny-assembly",
+		Bicameral:  "nysenate",
+		Name:       "NY Assembly",
+		DisplayID:  "NY-Assembly",
+		Location:   "New York",
+		URL:        "https://assembly.state.ny.us/",
+		MemberName: "Senator",
+		Sort:       nysenate.LegislationSort,
 	}
 )
 

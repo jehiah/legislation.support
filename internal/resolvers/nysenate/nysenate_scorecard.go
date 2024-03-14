@@ -3,7 +3,6 @@ package nysenate
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
@@ -25,6 +24,10 @@ func splitLegislationID(l legislature.LegislationID) (string, string) {
 
 func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookmarks []legislature.Scorable) (*legislature.Scorecard, error) {
 	s := &legislature.Scorecard{
+		Body: &body,
+		Metadata: legislature.ScorecardMetadata{
+			PersonTitle: body.MemberName,
+		},
 		Data: make([]legislature.ScoredBookmark, len(bookmarks)),
 	}
 
@@ -32,10 +35,8 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 	switch body.ID {
 	case "nysenate", "ny-senate":
 		c = senateChamber
-		s.Metadata.PersonTitle = "Senator"
 	case "ny-assembly":
 		c = assemblyChamber
-		s.Metadata.PersonTitle = "Assembly Member"
 	default:
 		return nil, fmt.Errorf("invalid chamber %s", body.ID)
 	}
@@ -63,73 +64,62 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 	noSameAs := make([]bool, len(bookmarks))
 	for i, b := range bookmarks {
 		i, b := i, b
-
 		g.Go(func() error {
 			sb := b.NewScore()
 
+			bill := sb.Legislation.ID
+			otherBill := sb.Legislation.SameAs
+			if sb.Legislation.Body != body.ID {
+				bill, otherBill = otherBill, bill
+			}
+			if bill == "" {
+				// no same-as
+				return nil
+			}
+
 			// if it's not the same body, get "same as" or skip
-			billSession, basePrintNo, _ := strings.Cut(string(sb.Legislation.ID), "-")
-			orginalBill, err := a.GetBill(ctx, billSession, basePrintNo)
+			billSession, basePrintNo := splitLegislationID(bill)
+			billData, err := a.GetBill(ctx, billSession, basePrintNo)
 			if err != nil {
 				return err
 			}
-			if orginalBill == nil {
-				log.Printf("not found %q", sb.Legislation.ID)
-				return nil
-			}
-			if sb.Legislation.Body != body.ID {
-				// lookup same as; if exists in the same body, use that
-				if sameAs := orginalBill.GetSameAs(); sameAs != "" {
-					log.Printf("[%d] substituting %s (%s) sameAs => %s", i, sb.Legislation.ID, sb.Legislation.DisplayID, sameAs)
-					sameAsSession, sameAsBasePrintNo := splitLegislationID(sameAs)
-					orginalBill, err = a.GetBill(ctx, sameAsSession, sameAsBasePrintNo)
-					if err != nil {
-						return err
-					}
-					// reset Legislation after "sameAs" lookup
-					sb.Legislation = orginalBill.Legislation(body.ID)
-				} else {
-					noSameAs[i] = true
-					return nil
-				}
-			}
+			sb.Status = billData.Status.StatusDesc
+			sb.Committee = billData.Status.CommitteeName
 
-			if sameAs := orginalBill.GetSameAs(); sameAs != "" {
-				_, sameAsBasePrintNo := splitLegislationID(sameAs)
-				sb.Legislation.DisplayID += " / " + sameAsBasePrintNo
-			}
-			votedBill := orginalBill
-
-			// Bills get substituted by bills in the other chamber; in that case votes in both chambers show on the substituted bill
-			if orginalBill.SubstitutedBy.BasePrintNo != "" {
-				log.Printf("substitution %s-%s SubstitutedBy => %d-%s", billSession, basePrintNo, orginalBill.SubstitutedBy.Session, orginalBill.SubstitutedBy.BasePrintNo)
-				votedBill, err = a.GetBill(ctx, strconv.Itoa(orginalBill.SubstitutedBy.Session), orginalBill.SubstitutedBy.BasePrintNo)
+			var otherBillData *Bill
+			if otherBill != "" {
+				otherBillSession, otherBasePrintNo := splitLegislationID(otherBill)
+				otherBillData, err = a.GetBill(ctx, otherBillSession, otherBasePrintNo)
 				if err != nil {
 					return err
+				}
+
+				if billData.SubstitutedBy.BasePrintNo == otherBasePrintNo {
+					sb.Status = otherBillData.Status.StatusDesc
+					sb.Committee = otherBillData.Status.CommitteeName
 				}
 			}
 
 			// FIXME: https://github.com/nysenate/OpenLegislation/issues/122
-			if c == assemblyChamber && orginalBill.BillType.Chamber == "ASSEMBLY" {
-				extraVotes, err := a.AssemblyVotes(ctx, people, strconv.Itoa(orginalBill.Session), orginalBill.BasePrintNo)
+			if c == assemblyChamber {
+				extraVotes, err := a.AssemblyVotes(ctx, people, billSession, basePrintNo)
 				if err != nil {
 					return err
 				}
-				votedBill.Votes.Items = append(votedBill.Votes.Items, extraVotes.Votes.Items...)
+				billData.Votes.Items = append(billData.Votes.Items, extraVotes.Votes.Items...)
 			}
 
-			sb.Status = votedBill.Status.StatusDesc
-			sb.Committee = orginalBill.Status.CommitteeName
 			scores := make(map[int]string)
 			remaining := make(map[int]bool)
-			for _, sponsor := range orginalBill.GetSponsors() {
+			for _, sponsor := range billData.GetSponsors() {
 				scores[sponsor.MemberID] = "Sponsor"
 				remaining[sponsor.MemberID] = true
 			}
 
-			for _, v := range votedBill.GetVotes().Filter(orginalBill.BillType.Chamber) {
+			for _, v := range billData.GetVotes().Filter(billData.BillType.Chamber) {
 				if v.MemberID == 0 {
 					log.WithField("session", billSession).WithField("bill", basePrintNo).Warnf("unexpected memberID=0 %#v", v)
+					continue
 				}
 				scores[v.MemberID] = v.Vote
 				remaining[v.MemberID] = true

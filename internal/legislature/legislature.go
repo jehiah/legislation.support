@@ -64,6 +64,7 @@ type Body struct {
 	Name       string
 	Location   string // ex: New York
 	URL        string
+	MemberName string
 	Bicameral  BodyID                       // In a bicameral legislature, the other half
 	UpperHouse bool                         // In a bicameral legislature, the upper house
 	Sort       func(a, b *Legislation) bool `json:"-"`
