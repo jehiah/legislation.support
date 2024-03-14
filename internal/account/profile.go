@@ -2,6 +2,7 @@ package account
 
 import (
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -102,11 +103,15 @@ func (b Bookmarks) Bodies() []legislature.BodyID {
 	l := make(map[legislature.BodyID]bool)
 	for _, bb := range b {
 		l[bb.BodyID] = true
+		if bb.Legislation.SameAs != "" {
+			l[bb.Body.Bicameral] = true
+		}
 	}
 	var bodies []legislature.BodyID
 	for body, _ := range l {
 		bodies = append(bodies, body)
 	}
+	sort.Slice(bodies, func(i, j int) bool { return bodies[i] < bodies[j] })
 	return bodies
 }
 
