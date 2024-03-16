@@ -43,8 +43,15 @@ func (l Legislation) IsStale() bool {
 	if !l.Session.Active() {
 		return false
 	}
-	// TODO: drop to 24hrs?
-	if l.LastChecked.Before(time.Now().Add(time.Hour * -24 * 7)) {
+	target := time.Hour * 24 * 30
+
+	// shorter timeframe for bicameral bills that don't have SameAs yet
+	if l.SameAs == "" && l.Body != "nyc" {
+		// TODO: don't hard code body
+		target = time.Hour * 24 * 2
+	}
+
+	if l.LastChecked.Before(time.Now().Add(target * -1)) {
 		return true
 	}
 	return false

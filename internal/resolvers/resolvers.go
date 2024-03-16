@@ -57,3 +57,7 @@ func IsValidBodyID(ID legislature.BodyID) bool {
 	_, ok := Bodies[ID]
 	return ok
 }
+
+func IsBicameral(b legislature.BodyID) bool {
+	return Bodies[b].Bicameral != ""
+}
