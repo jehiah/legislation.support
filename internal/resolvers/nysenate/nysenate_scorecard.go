@@ -74,6 +74,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 			}
 			if bill == "" {
 				// no same-as
+				noSameAs[i] = true
 				return nil
 			}
 
@@ -88,6 +89,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 
 			var otherBillData *Bill
 			if otherBill != "" {
+				sb.Legislation = billData.Legislation(body.ID)
 				otherBillSession, otherBasePrintNo := splitLegislationID(otherBill)
 				otherBillData, err = a.GetBill(ctx, otherBillSession, otherBasePrintNo)
 				if err != nil {
@@ -161,11 +163,12 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 			continue
 		}
 		if seen[d.Legislation.ID] {
-			// TODO: skip the one from the other chamber
+			// TODO: skip if both bills were listed
 			log.Printf("duplicated in profile (listed for both chambers) %s", d.Legislation.ID)
 			continue
 		}
 		seen[d.Legislation.ID] = true
+		seen[d.Legislation.SameAs] = true
 		newData = append(newData, d)
 	}
 	// TODO re-sort
