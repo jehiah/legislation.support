@@ -10,7 +10,6 @@ import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/iterator"
 )
 
@@ -53,6 +52,30 @@ func (a *App) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profi
 			return nil, err
 		}
 		out = append(out, p)
+	}
+	return out, nil
+}
+
+func (a *App) GetStaleBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
+	iter := a.firestore.CollectionGroup("bills").OrderBy("Added", firestore.Desc).Limit(limit).Documents(ctx)
+	defer iter.Stop()
+	var out []legislature.Legislation
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var o legislature.Legislation
+		err = doc.DataTo(&o)
+		if err != nil {
+			return nil, err
+		}
+		if o.IsStale() {
+			out = append(out, o)
+		}
 	}
 	return out, nil
 }
@@ -242,36 +265,6 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 			return nil, err
 		}
 		out[i].Legislation = &l
-	}
-
-	// if any bills are stale, refresh (some) of them - error should not be fatal
-	var wg errgroup.Group
-	updated := 0
-	for i := range out {
-		i := i
-		if out[i].Legislation != nil {
-			l := out[i].Legislation
-			// TODO: don't wait for these results
-			if l.IsStale() && updated < 15 {
-				updated++
-				log.Printf("%q is stale %v", l.ID, l.LastChecked)
-				wg.Go(func() error {
-					udpatedLeg, err := resolvers.Resolvers.Find(out[i].BodyID).Refresh(ctx, l.ID)
-					if err != nil {
-						return err
-					}
-					err = a.UpdateBill(ctx, *udpatedLeg)
-					if err != nil {
-						return err
-					}
-					out[i].Legislation = udpatedLeg
-					return nil
-				})
-			}
-		}
-	}
-	if err := wg.Wait(); err != nil {
-		log.Printf("err %s", err)
 	}
 
 	return out, nil

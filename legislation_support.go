@@ -549,6 +549,51 @@ func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// InternalRefresh handles a periodic request to refresh data
+// at /internal/refresh
+func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
+	if !a.devMode {
+		if r.Header.Get("X-CloudScheduler") == "true" {
+			http.Error(w, "Not Found", 404)
+			return
+		}
+	}
+
+	ctx := r.Context()
+	bills, err := a.GetStaleBills(ctx, 10)
+	if err != nil {
+		log.Printf("err %s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	// if any bills are stale, refresh (some) of them - error should not be fatal
+	var wg errgroup.Group
+	for i := range bills {
+		i := i
+		l := bills[i]
+
+		wg.Go(func() error {
+			udpatedLeg, err := resolvers.Resolvers.Find(l.Body).Refresh(ctx, l.ID)
+			if err != nil {
+				return err
+			}
+			err = a.UpdateBill(ctx, *udpatedLeg)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		log.Printf("err %s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.Write([]byte("done"))
+}
+
 func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
 	if strings.HasPrefix(r.URL.Path, "/__/auth") {
@@ -569,6 +614,11 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "/sign_out":
 			app.SignOut(w, r)
 			return
+		case "/internal/refresh":
+			if app.devMode {
+				app.InternalRefresh(w, r)
+				return
+			}
 		case "/robots.txt":
 			app.RobotsTXT(w, r)
 			return
@@ -609,6 +659,9 @@ func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "/data/session":
 			app.NewSession(w, r)
+			return
+		case "/internal/refresh":
+			app.InternalRefresh(w, r)
 			return
 		}
 	case "DELETE":
