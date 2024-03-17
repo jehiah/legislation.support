@@ -67,6 +67,10 @@ func LegislationLink(b legislature.BodyID, l legislature.LegislationID) template
 func LegislationDisplayID(b legislature.BodyID, l legislature.LegislationID) string {
 	return resolvers.Resolvers.Find(b).DisplayID(l)
 }
+func LookupBody(b legislature.BodyID) legislature.Body {
+	return resolvers.Bodies[b]
+}
+
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
 		"ToLower":  strings.ToLower,
@@ -77,6 +81,7 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		// "Resolver": resolvers.Resolvers.Find,
 		"LegislationLink":      LegislationLink,
 		"LegislationDisplayID": LegislationDisplayID,
+		"LookupBody":           LookupBody,
 	}
 	t := template.New("empty").Funcs(funcMap)
 	if n == "error.html" {

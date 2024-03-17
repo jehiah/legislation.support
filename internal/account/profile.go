@@ -103,14 +103,15 @@ func (b Bookmarks) Bodies() []legislature.BodyID {
 	l := make(map[legislature.BodyID]bool)
 	for _, bb := range b {
 		l[bb.BodyID] = true
-		if bb.Legislation.SameAs != "" {
+		if bb.Legislation.SameAs != "" && bb.Body != nil {
 			l[bb.Body.Bicameral] = true
 		}
 	}
-	var bodies []legislature.BodyID
-	for body, _ := range l {
+	bodies := make([]legislature.BodyID, 0, len(l))
+	for body := range l {
 		bodies = append(bodies, body)
 	}
+	// TODO: sort by name
 	sort.Slice(bodies, func(i, j int) bool { return bodies[i] < bodies[j] })
 	return bodies
 }

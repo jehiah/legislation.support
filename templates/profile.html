@@ -54,9 +54,20 @@
 {{if .Bookmarks}}
 
 {{if ge (len .Bookmarks.Bodies) 1}}
-  <div class="float-end">
-    Scorecard: {{range $i, $b := .Bookmarks.Bodies}}{{if ge $i 1}},{{end}} <a href="/{{$.Profile.ID}}/scorecard/{{.}}">{{.}}</a>{{end}}
+<div class="float-end">
+  <div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-card-checklist"></i> View Scorecard
+    </button>
+    <ul class="dropdown-menu">
+      {{range .Bookmarks.Bodies}}
+      {{with $B := (. | LookupBody)}}
+        <li><a class="dropdown-item" href="/{{$.Profile.ID}}/scorecard/{{.ID}}">{{.Name}}</a></li>
+      {{end}}
+      {{end}}
+    </ul>
   </div>
+</div>
 {{end}}
 
 <div class="row">

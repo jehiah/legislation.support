@@ -75,6 +75,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 			if bill == "" {
 				// no same-as
 				noSameAs[i] = true
+				s.Data[i] = sb
 				return nil
 			}
 
@@ -155,7 +156,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 	for i, d := range s.Data {
 		d := d
 		if noSameAs[i] {
-			log.Printf("skipping (no same as) %#v", d)
+			// log.Printf("skipping (no same as) %s", d.Legislation.ID)
 			continue
 		}
 		if d.Legislation == nil {
