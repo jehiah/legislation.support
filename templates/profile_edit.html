@@ -270,14 +270,15 @@ body {
       <div class="form-floating mt-2 mb-1">
         <textarea class="form-control" name="description" style="height: 8em;" maxlength="4096">{{.Profile.Description}}</textarea>
         <label>Description</label>
+        <div id="descriptionHelp" class="form-text">Markdown OK</div>
       </div>
 
       <div class="form-check form-switch mt-2 mb-1">
         <input class="form-check-input" type="checkbox" role="switch" id="edit-private" name="private" value="on" {{if .Profile.Private}}checked{{end}}>
-        <label class="form-check-label" for="edit-oppose">Private</label>
+        <label class="form-check-label" for="edit-private"><i class="bi bi-lock-fill"></i> Private Mode</label>
       </div>
 
-      <h4>Scorecard Options</h4>
+      <div class="mt-3"><strong>Scorecard Options</strong></div>
 
       <div class="form-check form-switch mt-2 mb-1">
         <input class="form-check-input" type="checkbox" role="switch" id="edit-district" name="hide_district" value="on" {{if .Profile.HideDistrict}}checked{{end}}>
