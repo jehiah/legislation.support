@@ -26,6 +26,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
+	"github.com/jehiah/legislation.support/internal/concurrentlimit"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	"github.com/microcosm-cc/bluemonday"
@@ -560,13 +561,16 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	r.ParseForm()
 	ctx := r.Context()
-	bills, err := a.GetStaleBills(ctx, 10)
+	bills, err := a.GetStaleBills(ctx, 500)
 	if err != nil {
 		log.Printf("err %s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
+
+	limiter := concurrentlimit.NewConcurrentLimit(5)
 
 	// if any bills are stale, refresh (some) of them - error should not be fatal
 	var wg errgroup.Group
@@ -575,15 +579,21 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 		l := bills[i]
 
 		wg.Go(func() error {
-			udpatedLeg, err := resolvers.Resolvers.Find(l.Body).Refresh(ctx, l.ID)
-			if err != nil {
-				return err
-			}
-			err = a.UpdateBill(ctx, *udpatedLeg)
-			if err != nil {
-				return err
-			}
-			return nil
+			return limiter.Run(func() error {
+				udpatedLeg, err := resolvers.Resolvers.Find(l.Body).Refresh(ctx, l.ID)
+				if err != nil {
+					return err
+				}
+				if r.Form.Get("dry_run") == "true" {
+					log.Printf("dry_run %#v", *udpatedLeg)
+				} else {
+					err = a.UpdateBill(ctx, *udpatedLeg)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			})
 		})
 	}
 	if err := wg.Wait(); err != nil {

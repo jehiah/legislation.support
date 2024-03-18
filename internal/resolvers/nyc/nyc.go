@@ -144,6 +144,20 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 	if d == nil {
 		return nil
 	}
+
+	sponsors := make([]legislature.Member, 0, len(d.Sponsors))
+	for _, p := range d.Sponsors {
+		if p.ID == 0 {
+			continue // borough president, etc
+		}
+		sponsors = append(sponsors, legislature.Member{
+			NumericID: p.ID,
+			FullName:  strings.TrimSpace(p.FullName),
+			URL:       "https://intro.nyc/councilmembers/" + p.Slug,
+			Slug:      p.Slug,
+		})
+	}
+
 	return &legislature.Legislation{
 		Body:           n.body.ID,
 		ID:             legislature.LegislationID(strings.TrimPrefix(d.File, "Int ")),
@@ -154,6 +168,7 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 		IntroducedDate: d.IntroDate,
 		Session:        Sessions.Find(d.IntroDate.Year()),
 		Status:         d.StatusName,
+		Sponsors:       sponsors,
 		LastModified:   d.LastModified,
 		URL:            "https://intro.nyc/" + strings.TrimPrefix(d.File, "Int "),
 	}

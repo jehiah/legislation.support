@@ -21,6 +21,7 @@ type Legislation struct {
 	Status      string
 	// Committee ?
 	// Prime Sponsor
+	Sponsors []Member
 
 	// for Bicameral legislatures
 	SameAs        LegislationID // the bill in the other house (if exists)
@@ -40,6 +41,10 @@ func (l Legislation) IsStale() bool {
 	if l.LastChecked.IsZero() {
 		return true
 	}
+	if len(l.Sponsors) == 0 {
+		return true
+	}
+
 	if !l.Session.Active() {
 		return false
 	}
@@ -163,11 +168,11 @@ func (s Session) Overlaps(start, end time.Time) bool {
 }
 
 type Member struct {
-	NumericID int
-	Slug      string
-	FullName  string
-	ShortName string
-	URL       string
-	District  string
+	NumericID int    `firestore:",omitempty`
+	Slug      string `firestore:",omitempty`
+	FullName  string `firestore:",omitempty`
+	ShortName string `firestore:",omitempty`
+	URL       string `firestore:",omitempty`
+	District  string `firestore:",omitempty`
 	// TODO: party?
 }

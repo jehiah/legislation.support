@@ -159,6 +159,17 @@ func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation 
 		log.Errorf("unable to find session %v", bill.Session)
 		return nil
 	}
+	var sponsors []legislature.Member
+	for _, m := range bill.GetSponsors() {
+		sponsors = append(sponsors, legislature.Member{
+			NumericID: m.MemberID,
+			FullName:  m.FullName,
+			ShortName: m.ShortName,
+			// District:  fmt.Sprintf("%d", mmm.DistrictCode),
+			// URL: fmt.Sprintf("https://www.nysenate.gov/senators/%d", m.MemberID)
+		})
+	}
+
 	return &legislature.Legislation{
 		ID:             bill.ID(),
 		Body:           body,
@@ -169,6 +180,7 @@ func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation 
 		Session:        session,
 		SameAs:         bill.GetSameAs(),
 		SubstitutedBy:  bill.GetSubstitutedBy(),
+		Sponsors:       sponsors,
 		URL:            fmt.Sprintf("https://www.nysenate.gov/legislation/bills/%d/%s", bill.Session, bill.BasePrintNo),
 	}
 }
