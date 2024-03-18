@@ -48,7 +48,8 @@ func (l Legislation) IsStale() bool {
 	if !l.Session.Active() {
 		return false
 	}
-	target := time.Hour * 12
+	// target := time.Hour * 12
+	target := time.Hour
 
 	// // shorter timeframe for bicameral bills that don't have SameAs yet
 	// if l.SameAs == "" && l.Body != "nyc" {
