@@ -48,13 +48,13 @@ func (l Legislation) IsStale() bool {
 	if !l.Session.Active() {
 		return false
 	}
-	target := time.Hour * 24 * 30
+	target := time.Hour * 12
 
-	// shorter timeframe for bicameral bills that don't have SameAs yet
-	if l.SameAs == "" && l.Body != "nyc" {
-		// TODO: don't hard code body
-		target = time.Hour * 24 * 2
-	}
+	// // shorter timeframe for bicameral bills that don't have SameAs yet
+	// if l.SameAs == "" && l.Body != "nyc" {
+	// 	// TODO: don't hard code body
+	// 	target = time.Hour * 24 * 2
+	// }
 
 	if l.LastChecked.Before(time.Now().Add(target * -1)) {
 		return true
@@ -168,11 +168,46 @@ func (s Session) Overlaps(start, end time.Time) bool {
 }
 
 type Member struct {
-	NumericID int    `firestore:",omitempty`
-	Slug      string `firestore:",omitempty`
-	FullName  string `firestore:",omitempty`
-	ShortName string `firestore:",omitempty`
-	URL       string `firestore:",omitempty`
-	District  string `firestore:",omitempty`
+	NumericID int    `firestore:",omitempty"`
+	Slug      string `firestore:",omitempty"`
+	FullName  string `firestore:",omitempty"`
+	ShortName string `firestore:",omitempty"`
+	URL       string `firestore:",omitempty"`
+	District  string `firestore:",omitempty"`
 	// TODO: party?
+}
+
+type SponsorChange struct {
+	Withdraw bool
+	Date     time.Time
+	Member   Member
+}
+
+// CalculateSponsorChanges returns a list of changes in .Sponsors from a to b
+func CalculateSponsorChanges(a, b Legislation) []SponsorChange {
+	have := make(map[Member]bool, len(a.Sponsors))
+	var changes []SponsorChange
+	for _, m := range a.Sponsors {
+		have[m] = true
+	}
+	date := b.LastModified
+	if date.IsZero() {
+		date = time.Now().UTC()
+	}
+	for _, m := range b.Sponsors {
+		if !have[m] {
+			changes = append(changes, SponsorChange{Date: date, Member: m})
+		}
+		have[m] = false
+	}
+	for m, v := range have {
+		if v {
+			changes = append(changes, SponsorChange{Date: date, Member: m, Withdraw: true})
+		}
+	}
+	return changes
+}
+
+type Changes struct {
+	Sponsors []SponsorChange
 }

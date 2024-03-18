@@ -563,7 +563,8 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	ctx := r.Context()
-	bills, err := a.GetStaleBills(ctx, 500)
+	limit := 500
+	bills, err := a.GetStaleBills(ctx, limit)
 	if err != nil {
 		log.Printf("err %s", err)
 		http.Error(w, err.Error(), 500)
@@ -587,7 +588,7 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 				if r.Form.Get("dry_run") == "true" {
 					log.Printf("dry_run %#v", *udpatedLeg)
 				} else {
-					err = a.UpdateBill(ctx, *udpatedLeg)
+					err = a.UpdateBill(ctx, l, *udpatedLeg)
 					if err != nil {
 						return err
 					}

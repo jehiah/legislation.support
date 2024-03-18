@@ -180,11 +180,32 @@ func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) 
 	return &b, err
 }
 
-func (a *App) UpdateBill(ctx context.Context, b legislature.Legislation) error {
+func (app *App) UpdateBill(ctx context.Context, a, b legislature.Legislation) error {
+
+	changes := legislature.CalculateSponsorChanges(a, b)
+	if len(changes) > 0 {
+		log.Printf("debug changes %s %s %#v", b.Body, b.ID, changes)
+		changesArray := make([]interface{}, len(changes))
+		for i := range changes {
+			changesArray[i] = changes[i]
+		}
+		_, err := app.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
+			{Path: "Sponsors", Value: firestore.ArrayUnion(changesArray...)},
+		})
+		if err != nil && IsNotFound(err) {
+			_, err = app.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Set(ctx, legislature.Changes{
+				Sponsors: changes,
+			})
+			if err != nil {
+				log.Printf("err setting changes %s", err)
+			}
+		} else if err != nil {
+			log.Printf("err setting changes %s", err)
+		}
+	}
 
 	b.LastChecked = time.Now().UTC()
-	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, b)
-	// TODO: handle duplicates
+	_, err := app.firestore.Collection("bodies").Doc(string(a.Body)).Collection("bills").Doc(string(a.ID)).Set(ctx, b)
 	return err
 }
 
@@ -208,6 +229,29 @@ func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
 		bb.Status = b.Status
 		bb.SameAs = b.SameAs
 		bb.SubstitutedBy = b.SubstitutedBy
+
+		changes := legislature.CalculateSponsorChanges(*bb, b)
+		if len(changes) > 0 {
+			log.Printf("debug changes %s %s %#v", b.Body, b.ID, changes)
+			changesArray := make([]interface{}, len(changes))
+			for i := range changes {
+				changesArray[i] = changes[i]
+			}
+			_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
+				{Path: "Sponsors", Value: firestore.ArrayUnion(changesArray...)},
+			})
+			if err != nil && IsNotFound(err) {
+				_, err = a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Set(ctx, legislature.Changes{
+					Sponsors: changes,
+				})
+				if err != nil {
+					log.Printf("err setting changes %s", err)
+				}
+			} else if err != nil {
+				log.Printf("err setting changes %s", err)
+			}
+		}
+
 		// TODO: more
 		_, err = a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, *bb)
 
