@@ -554,7 +554,7 @@ func (a *App) ProfileRemove(w http.ResponseWriter, r *http.Request) {
 // at /internal/refresh
 func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 	if !a.devMode {
-		if r.Header.Get("X-CloudScheduler") == "true" {
+		if r.Header.Get("X-Cloudscheduler") != "true" {
 			log.Printf("InternalRefresh headers %#v", r.Header)
 			http.Error(w, "Not Found", 404)
 			return
