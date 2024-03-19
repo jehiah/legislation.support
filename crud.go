@@ -311,10 +311,68 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 	return out, nil
 }
 
+type BookmarkChanges struct {
+	account.Bookmark
+	legislature.Changes
+}
+
+func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID) ([]BookmarkChanges, error) {
+	var out []BookmarkChanges
+	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
+	iter := query.Documents(ctx)
+	defer iter.Stop()
+	refs := []*firestore.DocumentRef{}
+	var bookmarks []account.Bookmark
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return out, err
+		}
+		var b account.Bookmark
+		err = doc.DataTo(&b)
+		if err != nil {
+			return out, err
+		}
+		body := resolvers.Bodies[b.BodyID]
+		b.Body = &body
+		bookmarks = append(bookmarks, b)
+		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
+		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("changes").Doc(string(b.LegislationID)))
+	}
+
+	docs, err := a.firestore.GetAll(ctx, refs)
+	if err != nil {
+		return out, err
+	}
+	for i := 0; i < len(docs)/2; i += 1 {
+		bc := BookmarkChanges{
+			Bookmark: bookmarks[i],
+		}
+		err = docs[i*2].DataTo(&bc.Legislation)
+		if err != nil {
+			return out, err
+		}
+		err = docs[(i*2)+1].DataTo(&bc.Changes)
+		if err != nil && !IsNotFound(err) {
+			return out, err
+		}
+		if len(bc.Changes.Sponsors) > 0 {
+			out = append(out, bc)
+		}
+	}
+	return out, nil
+
+}
+
 func (a *App) GetChanges(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (legislature.Changes, error) {
 	var r legislature.Changes
 	dsnap, err := a.firestore.Collection("bodies").Doc(string(body)).Collection("changes").Doc(string(id)).Get(ctx)
-	if err != nil {
+	if err != nil && IsNotFound(err) {
+		return r, nil
+	} else if err != nil {
 		return r, err
 	}
 	err = dsnap.DataTo(&r)

@@ -612,6 +612,105 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("done"))
 }
 
+func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	profileID := account.ProfileID(r.PathValue("profile"))
+	if !account.IsValidProfileID(profileID) {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+	uid := a.User(r)
+
+	profile, err := a.GetProfile(ctx, profileID)
+	if err != nil {
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		a.WebInternalError500(w, "")
+		return
+	}
+	if profile == nil {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
+	if uid == "" && profile.Private {
+		a.WebPermissionError403(w, "")
+		return
+	}
+
+	templateName := "profile_changes.html"
+	t := newTemplate(a.templateFS, "profile_changes.html")
+
+	type Change struct {
+		legislature.LegislationID
+		account.Bookmark
+		legislature.SponsorChange
+	}
+	type Page struct {
+		Page     string
+		Title    string
+		Message  Message
+		UID      account.UID
+		Profile  account.Profile
+		EditMode bool
+		Changes  []Change
+	}
+	body := Page{
+		Title:   profile.Name + " (legislation.support)",
+		Profile: *profile,
+		UID:     uid,
+	}
+
+	b, err := a.GetProfileChanges(ctx, profileID)
+	if err != nil {
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%s", err)
+		a.WebInternalError500(w, "")
+		return
+	}
+	for _, bb := range b {
+		if !bb.Legislation.Session.Active() {
+			continue
+		}
+
+		for _, c := range bb.Changes.Sponsors {
+			body.Changes = append(body.Changes, Change{
+				LegislationID: bb.LegislationID,
+				Bookmark:      bb.Bookmark,
+				SponsorChange: c,
+			})
+		}
+
+		// bicameral
+		if bb.Legislation.SameAs != "" {
+			changes, err := a.GetChanges(ctx, bb.Body.Bicameral, bb.Legislation.SameAs)
+			if err != nil {
+				log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%s", err)
+				a.WebInternalError500(w, "")
+				return
+			}
+			for _, c := range changes.Sponsors {
+				body.Changes = append(body.Changes, Change{
+					LegislationID: bb.Legislation.SameAs,
+					Bookmark:      bb.Bookmark,
+					SponsorChange: c,
+				})
+			}
+		}
+	}
+
+	sort.Slice(body.Changes, func(i, j int) bool {
+		return body.Changes[i].SponsorChange.Date.After(body.Changes[j].SponsorChange.Date)
+	})
+
+	// sort.Sort(account.SortedBookmarks(body.Bookmarks))
+	// log.Printf("bookmarks %#v", body.Bookmarks)
+
+	err = t.ExecuteTemplate(w, templateName, body)
+	if err != nil {
+		log.WithField("uid", uid).Error(err)
+		a.WebInternalError500(w, "")
+	}
+}
+
 // tsFmt is used to match logrus timestamp format
 // w/ our stdlib log fmt (Ldate | Ltime)
 const tsFmt = "2006/01/02 15:04:05"
@@ -670,8 +769,9 @@ func main() {
 	if app.devMode {
 		router.HandleFunc("GET /internal/refresh", app.InternalRefresh)
 	}
-	router.HandleFunc("GET /static/{file}", app.staticHandler.ServeHTTP)
+	router.HandleFunc("GET /static/logo.png", app.staticHandler.ServeHTTP)
 	router.HandleFunc("GET /{profile}", app.Profile)
+	router.HandleFunc("GET /{profile}/changes", app.ProfileChanges)
 	router.HandleFunc("GET /{profile}/scorecard/{body}", app.Scorecard)
 	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
 	// reverse proxy for signin-helpers for popup/redirect sign in
