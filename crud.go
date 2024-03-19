@@ -270,9 +270,6 @@ func (a *App) GetBill(ctx context.Context, body legislature.BodyID, id legislatu
 	return &l, err
 }
 
-// func (a *App) GetProfileBills(ctx context.Context, profileID string) ([]legislature.Legislation, error) {
-// }
-
 func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.ProfileID) (account.Bookmarks, error) {
 	var out account.Bookmarks
 	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
@@ -312,4 +309,14 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 	}
 
 	return out, nil
+}
+
+func (a *App) GetChanges(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (legislature.Changes, error) {
+	var r legislature.Changes
+	dsnap, err := a.firestore.Collection("bodies").Doc(string(body)).Collection("changes").Doc(string(id)).Get(ctx)
+	if err != nil {
+		return r, err
+	}
+	err = dsnap.DataTo(&r)
+	return r, err
 }

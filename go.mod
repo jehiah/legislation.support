@@ -1,6 +1,6 @@
 module github.com/jehiah/legislation.support
 
-go 1.21
+go 1.22
 
 toolchain go1.21.5
 
@@ -8,8 +8,10 @@ require (
 	cloud.google.com/go/firestore v1.14.0
 	firebase.google.com/go/v4 v4.13.0
 	github.com/dustin/go-humanize v1.0.1
+	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47
 	github.com/gorilla/handlers v1.5.2
 	github.com/jehiah/legislator v0.0.0-20231124232039-8a72b65d4117
+	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/net v0.20.0
 	golang.org/x/sync v0.6.0
@@ -32,7 +34,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
@@ -40,7 +41,6 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gosimple/slug v1.13.1 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.26 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect

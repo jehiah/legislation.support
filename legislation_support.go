@@ -301,8 +301,14 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, profile.Link(), 302)
 }
 
-func (a *App) Profile(w http.ResponseWriter, r *http.Request, profileID account.ProfileID) {
+func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	profileID := account.ProfileID(r.PathValue("profile"))
+	if !account.IsValidProfileID(profileID) {
+		log.Printf("invalid profile %q", profileID)
+		http.Error(w, "Not Found", 404)
+		return
+	}
 	uid := a.User(r)
 
 	profile, err := a.GetProfile(ctx, profileID)
@@ -606,89 +612,6 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("done"))
 }
 
-func (app App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
-	if strings.HasPrefix(r.URL.Path, "/__/auth") {
-		// reverse proxy for signin-helpers for popup/redirect sign in
-		// for Safari/iOS
-		app.firebaseAuth.ServeHTTP(w, r)
-		return
-	}
-	switch r.Method {
-	case "GET":
-		switch r.URL.Path {
-		case "/":
-			app.Index(w, r)
-			return
-		case "/sign_in":
-			app.SUSI(w, r)
-			return
-		case "/sign_out":
-			app.SignOut(w, r)
-			return
-		case "/internal/refresh":
-			if app.devMode {
-				app.InternalRefresh(w, r)
-				return
-			}
-		case "/robots.txt":
-			app.RobotsTXT(w, r)
-			return
-		}
-		if strings.HasPrefix(r.URL.Path, "/static/") {
-			app.staticHandler.ServeHTTP(w, r)
-			return
-		}
-		if strings.HasSuffix(r.URL.Path, "/scorecard") || strings.Contains(r.URL.Path, "/scorecard/") {
-			s := strings.Split(r.URL.Path, "/")
-			// /$profile/scorecard or /$profile/scorecard/$bodyID
-			if p := account.ProfileID(s[1]); account.IsValidProfileID(p) {
-				var b legislature.BodyID
-				if len(s) == 3 {
-					app.Scorecard(w, r, p, b)
-					return
-				} else if len(s) == 4 && resolvers.IsValidBodyID(legislature.BodyID(s[3])) {
-					b = legislature.BodyID(s[3])
-					if resolvers.IsValidBodyID(b) {
-						app.Scorecard(w, r, p, b)
-						return
-					}
-				}
-			}
-		}
-
-		if p := account.ProfileID(strings.TrimPrefix(r.URL.Path, "/")); account.IsValidProfileID(p) {
-			app.Profile(w, r, p)
-			return
-		}
-	case "POST":
-		switch r.URL.Path {
-		case "/":
-			app.IndexPost(w, r)
-			return
-		case "/data/profile":
-			app.ProfilePost(w, r)
-			return
-		case "/data/session":
-			app.NewSession(w, r)
-			return
-		case "/internal/refresh":
-			app.InternalRefresh(w, r)
-			return
-		}
-	case "DELETE":
-		switch r.URL.Path {
-		case "/data/profile":
-			app.ProfileRemove(w, r)
-			return
-		}
-	default:
-		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
-		return
-	}
-	http.NotFound(w, r)
-}
-
 // tsFmt is used to match logrus timestamp format
 // w/ our stdlib log fmt (Ldate | Ltime)
 const tsFmt = "2006/01/02 15:04:05"
@@ -732,10 +655,33 @@ func main() {
 			},
 		},
 	}
+
 	if *devMode {
 		app.templateFS = os.DirFS(".")
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	}
+
+	router := http.NewServeMux()
+	router.HandleFunc("GET /{$}", app.Index)
+	router.HandleFunc("POST /{$}", app.IndexPost)
+	router.HandleFunc("GET /sign_in", app.SUSI)
+	router.HandleFunc("GET /sign_out", app.SignOut)
+	router.HandleFunc("GET /robots.txt", app.RobotsTXT)
+	if app.devMode {
+		router.HandleFunc("GET /internal/refresh", app.InternalRefresh)
+	}
+	router.HandleFunc("GET /static/{file}", app.staticHandler.ServeHTTP)
+	router.HandleFunc("GET /{profile}", app.Profile)
+	router.HandleFunc("GET /{profile}/scorecard/{body}", app.Scorecard)
+	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
+	// reverse proxy for signin-helpers for popup/redirect sign in
+	// for Safari/iOS
+	router.Handle("/__/auth", app.firebaseAuth)
+
+	router.HandleFunc("POST /data/profile", app.ProfilePost)
+	router.HandleFunc("DELETE /data/profile", app.ProfileRemove)
+	router.HandleFunc("POST /data/session", app.NewSession)
+	router.HandleFunc("POST /internal/refresh", app.InternalRefresh)
 
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")
@@ -747,7 +693,7 @@ func main() {
 		}
 	}
 
-	var h http.Handler = app
+	var h http.Handler = router
 	if *logRequests {
 		h = handlers.LoggingHandler(os.Stdout, h)
 	}

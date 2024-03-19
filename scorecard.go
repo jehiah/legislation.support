@@ -12,9 +12,21 @@ import (
 )
 
 // Scorecard builds a scorecard for the tracked bills
-func (a *App) Scorecard(w http.ResponseWriter, r *http.Request, profileID account.ProfileID, bodyID legislature.BodyID) {
+func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 	t := newTemplate(a.templateFS, "scorecard.html")
 	ctx := r.Context()
+
+	profileID := account.ProfileID(r.PathValue("profile"))
+	if !account.IsValidProfileID(profileID) {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+	bodyID := legislature.BodyID(r.PathValue("body"))
+	if !resolvers.IsValidBodyID(bodyID) {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
 	uid := a.User(r)
 	fields := log.Fields{"uid": uid, "profileID": profileID, "body": bodyID}
 
