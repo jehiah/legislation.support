@@ -33,6 +33,9 @@
 .sponsor-name {
   font-weight: 600;
 }
+.member-name {
+  font-weight: 400;
+}
 
 .sponsor-name a:link {
   color: var(--brand-dark);
@@ -90,6 +93,7 @@
     <div class="change">
       {{if .Withdraw}} Sponsor Withdrawn {{else}} Sponsored {{end}} by 
       <span class="sponsor-name">
+      <span class="member-name">{{.Body.MemberName}}</span>
       {{if .SponsorChange.Member.URL }}
         <a href="{{.SponsorChange.Member.URL}}">{{.SponsorChange.Member.FullName}}</a>
       {{else}}

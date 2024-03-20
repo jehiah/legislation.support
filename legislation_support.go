@@ -642,6 +642,7 @@ func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
 
 	type Change struct {
 		legislature.LegislationID
+		*legislature.Body
 		account.Bookmark
 		legislature.SponsorChange
 	}
@@ -674,26 +675,19 @@ func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
 		for _, c := range bb.Changes.Sponsors {
 			body.Changes = append(body.Changes, Change{
 				LegislationID: bb.LegislationID,
+				Body:          bb.Body,
 				Bookmark:      bb.Bookmark,
 				SponsorChange: c,
 			})
 		}
-
-		// bicameral
-		if bb.Legislation.SameAs != "" {
-			changes, err := a.GetChanges(ctx, bb.Body.Bicameral, bb.Legislation.SameAs)
-			if err != nil {
-				log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%s", err)
-				a.WebInternalError500(w, "")
-				return
-			}
-			for _, c := range changes.Sponsors {
-				body.Changes = append(body.Changes, Change{
-					LegislationID: bb.Legislation.SameAs,
-					Bookmark:      bb.Bookmark,
-					SponsorChange: c,
-				})
-			}
+		for _, c := range bb.SameAsChanges.Sponsors {
+			sameAsBody := resolvers.Bodies[bb.Body.Bicameral]
+			body.Changes = append(body.Changes, Change{
+				LegislationID: bb.Legislation.SameAs,
+				Body:          &sameAsBody,
+				Bookmark:      bb.Bookmark,
+				SponsorChange: c,
+			})
 		}
 	}
 

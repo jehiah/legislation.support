@@ -314,15 +314,18 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 type BookmarkChanges struct {
 	account.Bookmark
 	legislature.Changes
+	SameAsChanges legislature.Changes
 }
 
+// GetProfileChanges returns all bills regardless of if any chagnes were detected
 func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID) ([]BookmarkChanges, error) {
 	var out []BookmarkChanges
+	var working []*BookmarkChanges
 	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
 	iter := query.Documents(ctx)
 	defer iter.Stop()
-	refs := []*firestore.DocumentRef{}
-	var bookmarks []account.Bookmark
+	var refs []*firestore.DocumentRef
+	var target []any
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -338,30 +341,51 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 		}
 		body := resolvers.Bodies[b.BodyID]
 		b.Body = &body
-		bookmarks = append(bookmarks, b)
+		bc := &BookmarkChanges{Bookmark: b}
+		working = append(working, bc)
 		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
+		target = append(target, &bc.Legislation)
 		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("changes").Doc(string(b.LegislationID)))
+		target = append(target, &bc.Changes)
 	}
 
 	docs, err := a.firestore.GetAll(ctx, refs)
 	if err != nil {
 		return out, err
 	}
-	for i := 0; i < len(docs)/2; i += 1 {
-		bc := BookmarkChanges{
-			Bookmark: bookmarks[i],
-		}
-		err = docs[i*2].DataTo(&bc.Legislation)
-		if err != nil {
-			return out, err
-		}
-		err = docs[(i*2)+1].DataTo(&bc.Changes)
+	for i, d := range docs {
+		err = d.DataTo(target[i])
 		if err != nil && !IsNotFound(err) {
 			return out, err
 		}
-		if len(bc.Changes.Sponsors) > 0 {
-			out = append(out, bc)
+	}
+
+	refs = []*firestore.DocumentRef{}
+	target = []any{}
+
+	for _, b := range working {
+		if b.Legislation.SameAs != "" {
+			refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.Body.Bicameral)).Collection("changes").Doc(string(b.Legislation.SameAs)))
+			target = append(target, &b.SameAsChanges)
 		}
+	}
+
+	if len(refs) > 0 {
+		docs, err := a.firestore.GetAll(ctx, refs)
+		if err != nil {
+			return out, err
+		}
+		for i, d := range docs {
+			err = d.DataTo(target[i])
+			if err != nil && !IsNotFound(err) {
+				return out, err
+			}
+		}
+	}
+
+	out = make([]BookmarkChanges, len(working))
+	for i, bc := range working {
+		out[i] = *bc
 	}
 	return out, nil
 
