@@ -188,7 +188,7 @@ body {
     <div class="legislation-title">{{.Legislation.Title}}</div>
     </div>
     {{if .Notes}}
-    <div class="notes">{{.Notes}}</div>
+    <div class="notes">{{.Notes | markdown}}</div>
     {{end}}
     <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>
@@ -231,7 +231,7 @@ body {
     <div class="legislation-title">{{.Legislation.Title}}</div>
     </div>
     {{if .Notes}}
-    <div class="notes">{{.Notes}}</div>
+    <div class="notes">{{.Notes | markdown}}</div>
     {{end}}
     <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>

@@ -179,7 +179,7 @@ type Member struct {
 }
 
 type SponsorChange struct {
-	Withdraw bool
+	Withdraw bool `firestore:",omitempty"`
 	Date     time.Time
 	Member   Member
 }
