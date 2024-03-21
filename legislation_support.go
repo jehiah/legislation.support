@@ -763,19 +763,22 @@ func main() {
 	if app.devMode {
 		router.HandleFunc("GET /internal/refresh", app.InternalRefresh)
 	}
-	router.HandleFunc("GET /static/logo.png", app.staticHandler.ServeHTTP)
 	router.HandleFunc("GET /{profile}", app.Profile)
 	router.HandleFunc("GET /{profile}/changes", app.ProfileChanges)
 	router.HandleFunc("GET /{profile}/scorecard/{body}", app.Scorecard)
-	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
-	// reverse proxy for signin-helpers for popup/redirect sign in
-	// for Safari/iOS
-	router.Handle("/__/auth", app.firebaseAuth)
 
 	router.HandleFunc("POST /data/profile", app.ProfilePost)
 	router.HandleFunc("DELETE /data/profile", app.ProfileRemove)
 	router.HandleFunc("POST /data/session", app.NewSession)
 	router.HandleFunc("POST /internal/refresh", app.InternalRefresh)
+
+	wrapper := http.NewServeMux()
+	wrapper.Handle("/", router)
+	wrapper.HandleFunc("GET /static/", app.staticHandler.ServeHTTP)
+	// https://firebase.google.com/docs/auth/web/redirect-best-practices#proxy-requests
+	// reverse proxy for signin-helpers for popup/redirect sign in
+	// for Safari/iOS
+	wrapper.Handle("/__/auth/", app.firebaseAuth)
 
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")
@@ -787,7 +790,7 @@ func main() {
 		}
 	}
 
-	var h http.Handler = router
+	var h http.Handler = wrapper
 	if *logRequests {
 		h = handlers.LoggingHandler(os.Stdout, h)
 	}
