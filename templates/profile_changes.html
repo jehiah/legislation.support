@@ -11,7 +11,9 @@
 }
 .legislation-title {
   display: inline-block;
-  /* font-weight: 600; */
+  font-weight: 200;
+  font-size: .8rem;
+  margin-bottom:5px;
 }
 .legislation-id a:link {
   color: var(--brand-dark);
@@ -25,10 +27,15 @@
 .notes {
   font-size: .8rem;
   color: var(--grey-dark);
-  border-left: solid 4px var(--grey-light-2);
+  /* border-left: solid 4px var(--grey-light-2); */
+  border-left: solid calc(var(--bs-gutter-x)*.2) var(--grey-light-2);
+  padding-left: calc(var(--bs-gutter-x)* .3);
 }
 .notes p:last-child {
   margin-bottom: 0;
+}
+.notes a:link {
+  color:inherit
 }
 .bookmark.hidden {
   display: none;
@@ -53,8 +60,8 @@
   display: inline-block;
 }
 .change-date {
-  font-weight: 200;
-  font-size:.8rem;
+  font-weight: 600;
+  /* font-size:.8rem; */
 }
 
 </style>
@@ -82,7 +89,8 @@
   <div class="row bookmark" data-tags="{{Join .Tags "|"}}">
     <div class="row1">
 
-    <div class="legislation-id">
+      <span class="change-date">{{.Date.Format "Jan 2 2006"}}</span>
+      <div class="legislation-id">
       {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
       <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a> /
       {{end}}
@@ -103,7 +111,6 @@
         {{.SponsorChange.Member.FullName}}
       {{end}}
     </span>
-    <span class="change-date">{{.Date.Format "Jan 2 2006"}}</span>
     </div>
   </div>
   

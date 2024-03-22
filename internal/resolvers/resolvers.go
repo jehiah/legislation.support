@@ -26,7 +26,7 @@ var (
 		DisplayID:  "NY-Senate",
 		Location:   "New York",
 		URL:        "https://www.nysenate.gov/",
-		MemberName: "Assembly Member",
+		MemberName: "Senator",
 		Sort:       nysenate.LegislationSort,
 	}
 	NYAssembly = legislature.Body{
@@ -36,7 +36,7 @@ var (
 		DisplayID:  "NY-Assembly",
 		Location:   "New York",
 		URL:        "https://assembly.state.ny.us/",
-		MemberName: "Senator",
+		MemberName: "Assembly Member",
 		Sort:       nysenate.LegislationSort,
 	}
 )
