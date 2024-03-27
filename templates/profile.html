@@ -167,13 +167,12 @@
 <script type="module">
   const qs = new URLSearchParams(window.location.search)
   const tags = new Set(qs.getAll("tag"))
-  if (tags.length > 0) {
+  if (tags.size > 0) {
     Array.from(document.getElementsByClassName("bookmark")).forEach(element => {
-    const eTags = (element.dataset.tags ? element.dataset.tags : "").split("|")
-    const hasTag = eTags.find(t => tags.has(t))
-    element.classList.toggle("hidden", !hasTag)
-  });
+      const eTags = (element.dataset.tags ? element.dataset.tags : "").split("|")
+      const hasTag = eTags.find(t => tags.has(t))
+      element.classList.toggle("hidden", !hasTag)
+    });
   }
-
 </script>
 {{end}}
