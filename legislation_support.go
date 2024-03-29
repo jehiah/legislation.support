@@ -26,6 +26,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
+	"github.com/jehiah/legislation.support/internal/apiresponse"
 	"github.com/jehiah/legislation.support/internal/concurrentlimit"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
@@ -385,8 +386,9 @@ type Message struct {
 }
 
 // ProfilePost handles the add of a new URL to a profile, or update of a profile
+// POST /data/profile
 func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	r.ParseMultipartForm(1 << 20) // 2Mb
 	ctx := r.Context()
 	uid := a.User(r)
 
@@ -396,11 +398,12 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		a.WebInternalError500(w, "")
+		apiresponse.InternalError500(w)
 		return
 	}
 	if profile == nil {
-		http.Error(w, "Not Found", 404)
+		log.WithContext(ctx).WithFields(logFields).Warnf("not found")
+		apiresponse.NotFound404(w)
 		return
 	}
 
@@ -411,26 +414,24 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case strings.TrimSpace(r.Form.Get("legislation_url")) != "":
-		var msg Message
-		added, err := a.ProfilePostURL(ctx, profileID, r)
+		var added int64
+		added, err = a.ProfilePostURL(ctx, profileID, r)
 		if added > 0 {
-			msg.Success = fmt.Sprintf("Added %d", added)
+			apiresponse.OK200(w, Message{
+				Success: fmt.Sprintf("Added %d", added),
+			})
+			return
 		}
-		if err != nil {
-			msg.Error = err.Error()
-		}
-		a.ShowProfile(w, ctx, uid, profile, msg)
-		return
 	case strings.TrimSpace(r.Form.Get("name")) != "":
 		err = a.ProfileEdit(ctx, *profile, r)
 	}
 
 	if err != nil {
 		log.WithContext(ctx).WithFields(logFields).Errorf("%#v", err)
-		a.WebInternalError500(w, "")
+		apiresponse.InternalError500(w)
 		return
 	}
-	http.Redirect(w, r, profile.Link(), 302)
+	apiresponse.OK200(w, nil)
 }
 
 func (a *App) ProfileEdit(ctx context.Context, p account.Profile, r *http.Request) error {
