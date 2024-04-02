@@ -188,10 +188,24 @@ body {
 
 
 <div class="row">
-  <p>{{if .Bookmarks.CountSupported}}{{.Bookmarks.CountSupported}} supported bills {{end}}
+  <div class="col-12">
+  {{if .Bookmarks.CountSupported}}{{.Bookmarks.CountSupported}} supported bills {{end}}
     {{if ne .Bookmarks.CountSupported (len .Bookmarks)}}and{{end}} 
     {{if .Bookmarks.CountOpposed}}{{.Bookmarks.CountOpposed}} opposed bills {{end}}
-     in current legislative sessions.</p>
+     in current legislative sessions.
+  </div>
+</div>
+
+{{end}}
+
+{{if .SelectedTag }}
+<div class="row">
+  <div class="col-10 col-md-7 col-lg-4">
+  <div class="alert alert-secondary p-2" role="alert">
+    <i class="bi bi-tags-fill"></i> Filtered to Tag: <strong>{{.SelectedTag}}</strong> 
+    <a href="{{.Profile.Link}}" class="alert-link float-end"><i class="bi bi-x-circle-fill"></i> Clear Filter</a>
+  </div>
+  </div>
 </div>
 {{end}}
 

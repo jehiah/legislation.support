@@ -73,6 +73,12 @@ func (b Bookmarks) DisplayTags() []DisplayTag {
 	for tag := range tags {
 		out = append(out, tag)
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Class != out[j].Class {
+			return out[i].Class < out[j].Class
+		}
+		return out[i].Tag < out[j].Tag
+	})
 	return out
 }
 
@@ -97,9 +103,9 @@ func (b Bookmark) DisplayTags() []DisplayTag {
 	}
 	if b.Legislation != nil {
 		out = append(out, DisplayTag{Tag: "session:" + b.Legislation.Session.String(), Class: "session"})
-		if len(b.Legislation.Sponsors) > 0 {
-			out = append(out, DisplayTag{Tag: "sponsor:" + b.Legislation.Sponsors[0].FullName, Class: "sponsor"})
-		}
+		// if len(b.Legislation.Sponsors) > 0 {
+		// 	out = append(out, DisplayTag{Tag: "sponsor:" + b.Legislation.Sponsors[0].FullName, Class: "sponsor"})
+		// }
 	}
 	for _, tag := range b.Tags {
 		out = append(out, DisplayTag{Tag: tag, Class: "tag"})

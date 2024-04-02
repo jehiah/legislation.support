@@ -336,12 +336,14 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 		a.WebPermissionError403(w, "")
 		return
 	}
-	a.ShowProfile(w, ctx, uid, profile, Message{})
+	a.ShowProfile(w, ctx, r, uid, profile, Message{})
 }
-func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, uid account.UID, profile *account.Profile, message Message) {
+
+func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Request, uid account.UID, profile *account.Profile, message Message) {
 	templateName := "profile.html"
 	t := newTemplate(a.templateFS, "profile.html")
 	profileID := profile.ID
+	r.ParseForm()
 
 	type Page struct {
 		Page              string
@@ -350,15 +352,17 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, uid accoun
 		UID               account.UID
 		Profile           account.Profile
 		EditMode          bool
+		SelectedTag       string
 		Bookmarks         account.Bookmarks
 		ArchivedBookmarks account.Bookmarks
 	}
 	body := Page{
-		Message:  message,
-		Title:    profile.Name + " (legislation.support)",
-		Profile:  *profile,
-		EditMode: uid == profile.UID,
-		UID:      uid,
+		Message:     message,
+		Title:       profile.Name + " (legislation.support)",
+		Profile:     *profile,
+		EditMode:    uid == profile.UID,
+		UID:         uid,
+		SelectedTag: r.Form.Get("tag"),
 	}
 	if body.EditMode {
 		templateName = "profile_edit.html"
@@ -375,6 +379,20 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, uid accoun
 			body.Bookmarks = append(body.Bookmarks, bb)
 		} else {
 			body.ArchivedBookmarks = append(body.ArchivedBookmarks, bb)
+		}
+	}
+
+	if body.SelectedTag != "" {
+		var hasTag bool
+		for _, t := range body.Bookmarks.DisplayTags() {
+			if t.Tag == body.SelectedTag {
+				hasTag = true
+				break
+			}
+		}
+		if !hasTag {
+			http.Redirect(w, r, profile.Link(), 302)
+			return
 		}
 	}
 
