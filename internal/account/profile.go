@@ -52,10 +52,60 @@ type Bookmark struct {
 	Tags  []string
 	Notes string
 
-	Body        *legislature.Body        `firestore:"-"`
-	Legislation *legislature.Legislation `firestore:"-"`
+	Body          *legislature.Body        `firestore:"-"`
+	BicameralBody *legislature.Body        `firestore:"-"`
+	Legislation   *legislature.Legislation `firestore:"-"`
 }
 type Bookmarks []Bookmark
+
+func (b Bookmarks) DisplayTags() []DisplayTag {
+	tags := make(map[DisplayTag]bool)
+	for _, bb := range b {
+		for _, tag := range bb.DisplayTags() {
+			switch tag.Class {
+			case "sponsor", "session":
+				continue
+			}
+			tags[tag] = true
+		}
+	}
+	out := make([]DisplayTag, 0, len(tags))
+	for tag := range tags {
+		out = append(out, tag)
+	}
+	return out
+}
+
+type DisplayTag struct {
+	Tag   string
+	Class string
+}
+
+func (b Bookmark) DisplayTags() []DisplayTag {
+	out := make([]DisplayTag, 0, len(b.Tags))
+	if b.Oppose {
+		out = append(out, DisplayTag{Tag: "Oppose", Class: "oppose"})
+	}
+	if b.BicameralBody != nil && b.BicameralBody.UpperHouse {
+		out = append(out, DisplayTag{Tag: b.BicameralBody.DisplayID, Class: "body"})
+	}
+	if b.Body != nil {
+		out = append(out, DisplayTag{Tag: b.Body.DisplayID, Class: "body"})
+	}
+	if b.BicameralBody != nil && !b.BicameralBody.UpperHouse {
+		out = append(out, DisplayTag{Tag: b.BicameralBody.DisplayID, Class: "body"})
+	}
+	if b.Legislation != nil {
+		out = append(out, DisplayTag{Tag: "session:" + b.Legislation.Session.String(), Class: "session"})
+		if len(b.Legislation.Sponsors) > 0 {
+			out = append(out, DisplayTag{Tag: "sponsor:" + b.Legislation.Sponsors[0].FullName, Class: "sponsor"})
+		}
+	}
+	for _, tag := range b.Tags {
+		out = append(out, DisplayTag{Tag: tag, Class: "tag"})
+	}
+	return out
+}
 
 // Filter includes items that match any of the selected bodies
 func (b Bookmarks) Filter(body ...legislature.BodyID) Bookmarks {

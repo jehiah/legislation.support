@@ -88,7 +88,7 @@
 {{range .Changes}}
   <div class="row bookmark" data-tags="{{Join .Tags "|"}}">
     <div class="row1">
-
+      <i class="bi bi-calendar-check me-1"></i>
       <span class="change-date">{{.Date.Format "Jan 2 2006"}}</span>
       <div class="legislation-id">
       {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
@@ -121,15 +121,8 @@
   {{end}}
   <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>
-      {{if .Oppose}}
-      <div class="oppose tag">Oppose</div>
-      {{end}}
-      <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
-      {{if .Legislation.Session}}
-      <div class="session tag" >session:{{.Legislation.Session}}</div>
-      {{end}}
-      {{range .Tags}}
-      <div class="tag">{{.}}</div>
+      {{range .DisplayTags}}
+      <div class="tag {{.Class}}">{{.Tag}}</div>
       {{end}}
     </div>
   </div>

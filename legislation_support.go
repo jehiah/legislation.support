@@ -72,6 +72,14 @@ func LegislationDisplayID(b legislature.BodyID, l legislature.LegislationID) str
 func LookupBody(b legislature.BodyID) legislature.Body {
 	return resolvers.Bodies[b]
 }
+func JoinTags(tags []account.DisplayTag) string {
+	var out []string
+	for _, t := range tags {
+		out = append(out, t.Tag)
+	}
+	return strings.Join(out, "|")
+
+}
 
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
@@ -79,6 +87,7 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"Comma":    commaInt,
 		"Time":     humanize.Time,
 		"Join":     strings.Join,
+		"JoinTags": JoinTags,
 		"markdown": Markdown,
 		// "Resolver": resolvers.Resolvers.Find,
 		"LegislationLink":      LegislationLink,

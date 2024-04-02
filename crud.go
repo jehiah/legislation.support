@@ -306,6 +306,12 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 			return nil, err
 		}
 		out[i].Legislation = &l
+
+		if l.SameAs != "" {
+			body := resolvers.Bodies[out[i].Body.Bicameral]
+			out[i].BicameralBody = &body
+		}
+
 	}
 
 	return out, nil
@@ -367,6 +373,8 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 		if b.Legislation.SameAs != "" {
 			refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.Body.Bicameral)).Collection("changes").Doc(string(b.Legislation.SameAs)))
 			target = append(target, &b.SameAsChanges)
+			body := resolvers.Bodies[b.Body.Bicameral]
+			b.BicameralBody = &body
 		}
 	}
 

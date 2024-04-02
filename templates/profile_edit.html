@@ -154,10 +154,12 @@ body {
 
 {{if .Bookmarks}}
 
+
+
 {{if ge (len .Bookmarks.Bodies) 1}}
   <div class="float-end">
     <div class="dropdown">
-      <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <button class="btn btn-secondary dropdown-toggle btn-sm ms-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
         <i class="bi bi-card-checklist"></i> View Scorecard
       </button>
       <ul class="dropdown-menu">
@@ -171,6 +173,20 @@ body {
   </div>
 {{end}}
 
+<div class="float-end">
+  <div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle btn-sm ms-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-sliders2"></i> Tag Filter
+    </button>
+    <ul class="dropdown-menu">
+      {{range .Bookmarks.DisplayTags}}
+        <li><a class="dropdown-item" href="/{{$.Profile.ID}}?tag={{.Tag}}">{{.Tag}}</a></li>
+      {{end}}
+    </ul>
+  </div>
+</div>
+
+
 <div class="row">
   <p>{{if .Bookmarks.CountSupported}}{{.Bookmarks.CountSupported}} supported bills {{end}}
     {{if ne .Bookmarks.CountSupported (len .Bookmarks)}}and{{end}} 
@@ -181,7 +197,7 @@ body {
 
 
 {{range .Bookmarks}}
-  <div class="row bookmark">
+  <div class="row bookmark" data-tags="{{JoinTags .DisplayTags}}">
     <div class="row1">
     <div class="edit-bookmark float-end"><a href="#" class="edit" data-legislationid="{{.LegislationID}}" data-bodyid="{{.BodyID}}">edit</a></div>
     <div class="legislation-id">
@@ -200,15 +216,8 @@ body {
     {{end}}
     <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>
-      {{if .Oppose}}
-      <div class="oppose tag">Oppose</div>
-      {{end}}
-      <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
-      {{if .Legislation.Session}}
-      <div class="session tag" >session:{{.Legislation.Session}}</div>
-      {{end}}
-      {{range .Tags}}
-      <div class="tag">{{.}}</div>
+      {{range .DisplayTags}}
+      <div class="tag {{.Class}}">{{.Tag}}</div>
       {{end}}
     </div>
   </div>
@@ -225,7 +234,7 @@ body {
     <h3>Archived</h3>
   </div>
   {{range .ArchivedBookmarks}}
-  <div class="row bookmark">
+  <div class="row bookmark" data-tags="{{JoinTags .DisplayTags}}">
     <div class="row1">
     <div class="legislation-id">
       {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
@@ -243,15 +252,8 @@ body {
     {{end}}
     <div class="tags">
       <i class="bi bi-tag" alt="Tags"></i>
-      {{if .Oppose}}
-      <div class="oppose tag">Oppose</div>
-      {{end}}
-      <div class="body tag" title="{{.Body.Name}}">{{.Body.DisplayID}}</div>
-      {{if .Legislation.Session}}
-      <div class="session tag" >session:{{.Legislation.Session}}</div>
-      {{end}}
-      {{range .Tags}}
-      <div class="tag">{{.}}</div>
+      {{range .DisplayTags}}
+      <div class="tag {{.Class}}">{{.Tag}}</div>
       {{end}}
     </div>
   </div>
