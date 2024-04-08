@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -408,8 +408,8 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 }
 
 type Message struct {
-	Success string
-	Error   string
+	Success string `json:"success,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 // ProfilePost handles the add of a new URL to a profile, or update of a profile
@@ -441,14 +441,25 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case strings.TrimSpace(r.Form.Get("legislation_url")) != "":
-		var added int64
-		added, err = a.ProfilePostURL(ctx, profileID, r)
-		if added > 0 {
-			apiresponse.OK200(w, Message{
-				Success: fmt.Sprintf("Added %d", added),
-			})
-			return
+		changes := a.ProfilePostURL(ctx, profileID, r)
+		log.Printf("changes %#v", changes)
+		var m Message
+		for _, c := range changes {
+			if c == nil {
+				continue
+			}
+			if c.Error != "" {
+				m.Error += c.Error + "\n"
+			} else {
+				if c.New {
+					m.Success += fmt.Sprintf("Added %s %s %s\n", c.Body.Name, c.Legislation.DisplayID, c.Legislation.Title)
+				} else {
+					m.Success += fmt.Sprintf("Updated %s %s %s\n", c.Body.Name, c.Legislation.DisplayID, c.Legislation.Title)
+				}
+			}
 		}
+		apiresponse.OK200(w, m)
+		return
 	case strings.TrimSpace(r.Form.Get("name")) != "":
 		err = a.ProfileEdit(ctx, *profile, r)
 	}
@@ -474,75 +485,99 @@ func (a *App) ProfileEdit(ctx context.Context, p account.Profile, r *http.Reques
 	return a.UpdateProfile(ctx, p)
 }
 
-func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r *http.Request) (int64, error) {
+type BookmarkChange struct {
+	New   bool
+	URL   string
+	Error string
+	*account.Bookmark
+}
+
+func (b *BookmarkChange) record(err error) {
+	if err != nil {
+		log.Printf("BookmarkChange error %s", err)
+		b.Error = err.Error()
+	}
+}
+
+func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r *http.Request) []*BookmarkChange {
 	uid := a.User(r)
-	g := new(errgroup.Group)
-	// support multiple URL's
-	var added int64
+	input := strings.Fields(strings.TrimSpace(r.Form.Get("legislation_url")))
+	output := make([]*BookmarkChange, len(input))
 
-	for _, legUrl := range strings.Fields(strings.TrimSpace(r.Form.Get("legislation_url"))) {
+	var wg sync.WaitGroup
+	for i, legUrl := range input {
+		i := i
 		legUrl := legUrl
-
-		g.Go(func() error {
-
-			u, err := url.Parse(legUrl)
-			if err != nil {
-				return err
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			o := &BookmarkChange{
+				URL: legUrl,
 			}
-			logFields := log.Fields{"uid": uid, "profileID": profileID, "legislation_url": u.String()}
-			log.WithContext(ctx).WithFields(logFields).Infof("parsed URL")
-			bill, err := resolvers.Resolvers.Lookup(r.Context(), u)
-			if err != nil {
-				return err
-			}
-			if bill == nil {
-				return fmt.Errorf("Legislation matching url %q not found", u)
-			}
-
-			// Save refreshes a bill as well
-			err = a.SaveBill(ctx, *bill)
-			if err != nil {
-				return err
-			}
-
-			bookmark, err := a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))
-			if err != nil {
-				return err
-			}
-			if bookmark != nil {
-				bookmark.Notes = strings.TrimSpace(r.Form.Get("notes"))
-				bookmark.Tags = strings.Fields(strings.TrimSpace(r.Form.Get("tags")))
-				bookmark.Oppose = r.Form.Get("support") == "👎"
-
-				// update
-				err = a.UpdateBookmark(ctx, profileID, *bookmark)
+			output[i] = o
+			o.record(func() error {
+				var u *url.URL
+				u, err := url.Parse(legUrl)
 				if err != nil {
 					return err
 				}
-				atomic.AddInt64(&added, 1)
-				return nil
-			}
+				logFields := log.Fields{"uid": uid, "profileID": profileID, "legislation_url": u.String()}
+				log.WithContext(ctx).WithFields(logFields).Infof("parsed URL")
+				var bill *legislature.Legislation
+				bill, err = resolvers.Resolvers.Lookup(r.Context(), u)
+				if err != nil {
+					return err
+				}
+				if bill == nil {
+					return fmt.Errorf("Legislation matching url %q not found", u)
 
-			oppose := r.Form.Get("support") == "👎"
-			err = a.SaveBookmark(ctx, profileID, account.Bookmark{
-				UID:           uid,
-				BodyID:        bill.Body,
-				LegislationID: bill.ID,
-				Oppose:        oppose,
-				Created:       time.Now().UTC(),
-				Notes:         strings.TrimSpace(r.Form.Get("notes")),
-				Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
-			})
-			if err != nil && IsAlreadyExists(err) {
+				}
+				body := resolvers.Bodies[bill.Body]
+
+				// Save refreshes a bill as well
+				err = a.SaveBill(ctx, *bill)
+				if err != nil {
+					return err
+				}
+
+				o.Bookmark, err = a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))
+				if err != nil {
+					return err
+				}
+				if o.Bookmark != nil {
+					o.Bookmark.Notes = strings.TrimSpace(r.Form.Get("notes"))
+					o.Bookmark.Tags = strings.Fields(strings.TrimSpace(r.Form.Get("tags")))
+					o.Bookmark.Oppose = r.Form.Get("support") == "👎"
+
+					o.Legislation = bill
+					o.Body = &body
+
+					// update
+					return a.UpdateBookmark(ctx, profileID, *o.Bookmark)
+				}
+
+				o.Bookmark = &account.Bookmark{
+					UID:           uid,
+					BodyID:        bill.Body,
+					LegislationID: bill.ID,
+					Oppose:        r.Form.Get("support") == "👎",
+					Created:       time.Now().UTC(),
+					Notes:         strings.TrimSpace(r.Form.Get("notes")),
+					Tags:          strings.Fields(strings.TrimSpace(r.Form.Get("tags"))),
+
+					Legislation: bill,
+					Body:        &body,
+				}
+				err = a.SaveBookmark(ctx, profileID, *o.Bookmark)
+				if err != nil && !IsAlreadyExists(err) {
+					return err
+				}
 				return nil
-			} else if err == nil {
-				// results
-				atomic.AddInt64(&added, 1)
-			}
-			return nil
-		})
+			}())
+		}()
 	}
-	return added, g.Wait()
+	wg.Wait()
+	return output
 
 }
 
