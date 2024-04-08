@@ -447,6 +447,7 @@ Array.from([
     event.preventDefault()
     const addForm = document.getElementById('add-form')
     const formData = new FormData(addForm);
+    formData.set('support', button.value)
 
     fetch("/data/profile", {
       method:"POST",
