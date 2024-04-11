@@ -6,21 +6,9 @@
 .profile-name {
   border-bottom: 1px solid var(--brand);
 }
-.legislation-id {
-  display: inline-block;
-}
 .legislation-title {
   display: inline-block;
   font-weight: 600;
-}
-.legislation-id a:link {
-  color: var(--brand-dark);
-}
-.legislation-id a:visited {
-  color: var(--brand-dark-2);
-}
-.legislation-id a:hover {
-  color: var(--brand-medium);
 }
 .notes {
   font-size: .8rem;
@@ -41,6 +29,13 @@
 
 <div class="row">
 <h2 class="profile-name">{{.Profile.Name}}</h2>
+
+<nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '>';">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">{{.Profile.Name}}</li>
+  </ol>
+</nav>
+
 {{ if .Profile.Description }}
   <div class="profile-description">{{.Profile.Description | markdown}}</div>
 {{ end }}

@@ -47,12 +47,12 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Page struct {
-		Page      string
-		Title     string
-		UID       account.UID
-		Profile   account.Profile
-		EditMode  bool
-		Scorecard *legislature.Scorecard
+		Page     string
+		Title    string
+		UID      account.UID
+		Profile  account.Profile
+		EditMode bool
+		*legislature.Scorecard
 		// Bookmarks []account.Bookmark
 	}
 	pageBody := Page{

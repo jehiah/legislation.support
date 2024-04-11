@@ -11,21 +11,9 @@ body {
   border-bottom: 1px solid var(--brand);
 }
 
-.legislation-id {
-  display: inline-block;
-}
 .legislation-title {
   display: inline-block;
   font-weight: 600;
-}
-.legislation-id a:link {
-  color: var(--brand-dark);
-}
-.legislation-id a:visited {
-  color: var(--brand-dark-2);
-}
-.legislation-id a:hover {
-  color: var(--brand-medium);
 }
 .notes {
   font-size: .8rem;
@@ -56,8 +44,13 @@ body {
 {{define "middle"}}
 
 <div class="row">
-<h2 class="profile-name">{{.Profile.Name}} <a href="#" class="edit-profile"><i class="bi bi-pencil-square"></i>
-</a></h2>
+<h2 class="profile-name">{{.Profile.Name}} <a href="#" class="edit-profile"><i class="bi bi-pencil-square"></i> edit</a></h2>
+<nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '>';">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">{{.Profile.Name}}</li>
+  </ol>
+</nav>
+
 {{ if .Profile.Description }}
   <div class="profile-description"><a href="#" class="edit-profile float-end"><i class="bi bi-pencil-square"></i></a>{{.Profile.Description | markdown}}</div>
 {{ end }}
@@ -184,6 +177,17 @@ body {
       {{range .Bookmarks.DisplayTags}}
         <li><a class="dropdown-item" href="/{{$.Profile.ID}}?tag={{.Tag}}">{{.Tag}}</a></li>
       {{end}}
+    </ul>
+  </div>
+</div>
+
+<div class="float-end">
+  <div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle btn-sm ms-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-bell-fill"></i>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/{{$.Profile.ID}}/changes">Sponsor Changes</a></li>
     </ul>
   </div>
 </div>

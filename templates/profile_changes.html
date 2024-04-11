@@ -6,23 +6,11 @@
 .profile-name {
   border-bottom: 1px solid var(--brand);
 }
-.legislation-id {
-  display: inline-block;
-}
 .legislation-title {
   display: inline-block;
   font-weight: 200;
   font-size: .8rem;
   margin-bottom:5px;
-}
-.legislation-id a:link {
-  color: var(--brand-dark);
-}
-.legislation-id a:visited {
-  color: var(--brand-dark-2);
-}
-.legislation-id a:hover {
-  color: var(--brand-medium);
 }
 .notes {
   font-size: .8rem;
@@ -33,9 +21,6 @@
 }
 .notes p:last-child {
   margin-bottom: 0;
-}
-.notes a:link {
-  color:inherit
 }
 .bookmark.hidden {
   display: none;
@@ -71,6 +56,15 @@
 
 <div class="row">
 <h2 class="profile-name">{{.Profile.Name}}</h2>
+
+<nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '>';">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{.Profile.Link}}">{{.Profile.Name}}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Recent Sponsor Changes</li>
+  </ol>
+</nav>
+
+
 {{ if .Profile.Description }}
   <div class="profile-description">{{.Profile.Description | markdown}}</div>
 {{ end }}
