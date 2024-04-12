@@ -47,7 +47,8 @@ body {
 <h2 class="profile-name">{{.Profile.Name}} <a href="#" class="edit-profile"><i class="bi bi-pencil-square"></i> edit</a></h2>
 <nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '>';">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item active" aria-current="page">{{.Profile.Name}}</li>
+    <li class="breadcrumb-item"><a href="/">Profiles</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Legislation</li>
   </ol>
 </nav>
 
@@ -219,7 +220,7 @@ body {
 {{range .Bookmarks}}
   <div class="row bookmark" data-tags="{{JoinTags .DisplayTags}}">
     <div class="row1">
-    <div class="edit-bookmark float-end"><a href="#" class="edit" data-legislationid="{{.LegislationID}}" data-bodyid="{{.BodyID}}">edit</a></div>
+    <div class="edit-bookmark float-end"><a href="#" class="edit" data-legislationid="{{.LegislationID}}" data-bodyid="{{.BodyID}}"><i class="bi bi-pencil-square"></i> edit</a></div>
     <div class="legislation-id">
       {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
       <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a> /

@@ -30,12 +30,6 @@
 <div class="row">
 <h2 class="profile-name">{{.Profile.Name}}</h2>
 
-<nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '>';">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item active" aria-current="page">{{.Profile.Name}}</li>
-  </ol>
-</nav>
-
 {{ if .Profile.Description }}
   <div class="profile-description">{{.Profile.Description | markdown}}</div>
 {{ end }}
