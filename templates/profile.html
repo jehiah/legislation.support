@@ -76,6 +76,18 @@
   </div>
 </div>
 
+<div class="float-end">
+  <div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle btn-sm ms-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-bell-fill"></i>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/{{$.Profile.ID}}/changes">Sponsor Changes</a></li>
+    </ul>
+  </div>
+</div>
+
+
 <div class="row">
   <p>{{if .Bookmarks.CountSupported}}{{.Bookmarks.CountSupported}} supported bills {{end}}
     {{if ne .Bookmarks.CountSupported (len .Bookmarks)}}and{{end}} 
