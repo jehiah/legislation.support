@@ -347,6 +347,10 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 		}
 		body := resolvers.Bodies[b.BodyID]
 		b.Body = &body
+		if body.Bicameral != "" {
+			body := resolvers.Bodies[body.Bicameral]
+			b.BicameralBody = &body
+		}
 		bc := &BookmarkChanges{Bookmark: b}
 		working = append(working, bc)
 		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
@@ -373,8 +377,6 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 		if b.Legislation.SameAs != "" {
 			refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.Body.Bicameral)).Collection("changes").Doc(string(b.Legislation.SameAs)))
 			target = append(target, &b.SameAsChanges)
-			body := resolvers.Bodies[b.Body.Bicameral]
-			b.BicameralBody = &body
 		}
 	}
 

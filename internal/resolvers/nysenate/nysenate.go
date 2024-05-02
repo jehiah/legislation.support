@@ -58,17 +58,27 @@ func NewNYAssembly(body legislature.Body, token string) *NYAssembly {
 	}
 }
 
+// LegislationSort is a custom sort function for NYSenate legislation
+// sorting upper chamber bills first, then lower chamber
 func LegislationSort(a, b *legislature.Legislation) bool {
+	aID, bID := a.ID, b.ID
+	// prefer to sort with the ID for the Upper House
+	if a.SameAs != "" && aID[5] == 'A' {
+		aID = a.SameAs
+	}
+	if b.SameAs != "" && bID[5] == 'A' {
+		bID = b.SameAs
+	}
 	switch {
-	case a.Body != b.Body:
-		return a.Body < b.Body
+	// case a.Body != b.Body:
+	// 	return a.Body < b.Body
 	case a.Session != b.Session:
 		return a.Session.StartYear < b.Session.StartYear
-	case a.ID[5] != b.ID[5]:
-		return a.ID[5] < b.ID[5]
+	case aID[5] != bID[5]:
+		return aID[5] == 'S'
 	default:
-		aa, _ := strconv.Atoi(string(a.ID)[6:]) // i.e 2020-S1234
-		bb, _ := strconv.Atoi(string(b.ID)[6:])
+		aa, _ := strconv.Atoi(string(aID)[6:]) // i.e 2020-S1234
+		bb, _ := strconv.Atoi(string(bID)[6:])
 		return aa < bb
 	}
 }

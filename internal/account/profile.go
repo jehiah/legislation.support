@@ -183,6 +183,25 @@ func (b Bookmark) NewScore() legislature.ScoredBookmark {
 func (b Bookmark) Key() string {
 	return string(b.BodyID) + "." + string(b.LegislationID)
 }
+func (b Bookmark) UpperBody() *legislature.Body {
+	if b.BicameralBody != nil && b.BicameralBody.UpperHouse {
+		return b.BicameralBody
+	}
+	if b.Body.Bicameral != "" && !b.Body.UpperHouse {
+		return nil
+	}
+	return b.Body
+}
+
+func (b Bookmark) LowerBody() *legislature.Body {
+	if b.BicameralBody != nil && !b.BicameralBody.UpperHouse {
+		return b.BicameralBody
+	}
+	if b.Body.Bicameral != "" && b.Body.UpperHouse {
+		return nil
+	}
+	return b.Body
+}
 
 func BookmarkKey(b legislature.BodyID, l legislature.LegislationID) string {
 	return string(b) + "." + string(l)
@@ -194,10 +213,22 @@ type SortedBookmarks []Bookmark
 func (s SortedBookmarks) Len() int      { return len(s) }
 func (s SortedBookmarks) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s SortedBookmarks) Less(i, j int) bool {
-	if s[i].BodyID != s[j].BodyID {
-		return s[i].Body.Name < s[j].Body.Name
+	a, b := s[i], s[j]
+	b1, b2 := a.UpperBody(), b.UpperBody()
+	if b1 == nil {
+		b1 = a.LowerBody()
 	}
-	return s[i].Body.Sort(s[i].Legislation, s[j].Legislation)
+	if b2 == nil {
+		b2 = b.LowerBody()
+	}
+	if b1.ID != b2.ID {
+		if b1.Bicameral == b2.ID {
+			return b1.UpperHouse
+		}
+		return b1.Name < b2.Name
+	}
+
+	return b1.Sort(a.Legislation, b.Legislation)
 }
 
 func IsValidProfileID(s ProfileID) bool {
