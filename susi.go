@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/jehiah/legislation.support/internal/account"
+	"github.com/jehiah/legislation.support/internal/legislature"
+	"github.com/jehiah/legislation.support/internal/resolvers"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,6 +25,57 @@ func (a *App) User(r *http.Request) account.UID {
 		return ""
 	}
 	return account.UID(decoded.UID)
+}
+
+type BillBody struct {
+	Legislation legislature.Legislation
+	Body        legislature.Body
+}
+
+func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	type Page struct {
+		Page       string
+		Title      string
+		UID        account.UID
+		Bills      []BillBody
+		AuthDomain string
+	}
+
+	var bills []legislature.Legislation
+	var err error
+
+	if r.URL.Path == "/" {
+		bills, err = a.GetRecentBills(ctx, 10)
+		if err != nil {
+			log.Print(err)
+			a.WebInternalError500(w, "")
+			return
+		}
+	}
+
+	body := Page{
+		Title:      "legislation.support",
+		AuthDomain: "legislation.support",
+	}
+	if a.devMode {
+		body.AuthDomain = "dev.legislation.support"
+	}
+
+	for _, b := range bills {
+		body.Bills = append(body.Bills, BillBody{
+			Legislation: b,
+			Body:        resolvers.Bodies[b.Body],
+		})
+	}
+
+	t := newTemplate(a.templateFS, "susi.html")
+	err = t.ExecuteTemplate(w, "susi.html", body)
+	if err != nil {
+		log.Print(err)
+		a.WebInternalError500(w, "")
+	}
+	return
 }
 
 func (a *App) SignOut(w http.ResponseWriter, r *http.Request) {
