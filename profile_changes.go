@@ -75,7 +75,7 @@ func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
 		Changes  []Change
 	}
 	body := Page{
-		Title:   profile.Name + " (legislation.support)",
+		Title:   profile.Name + " Recent Sponsor Changes",
 		Profile: *profile,
 		UID:     uid,
 	}

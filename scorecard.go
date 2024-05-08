@@ -55,12 +55,6 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 		*legislature.Scorecard
 		// Bookmarks []account.Bookmark
 	}
-	pageBody := Page{
-		Title:    profile.Name + " scorecard (legislation.support)",
-		Profile:  *profile,
-		EditMode: uid == profile.UID,
-		UID:      uid,
-	}
 	b, err := a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
 		log.WithFields(fields).Errorf("%#v", err)
@@ -82,6 +76,13 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.Error(w, "Not Found", 404)
 		return
+	}
+
+	pageBody := Page{
+		Title:    profile.Name + " " + body.Name + " Scorecard",
+		Profile:  *profile,
+		EditMode: uid == profile.UID,
+		UID:      uid,
 	}
 
 	// bookmarks := b.Active().Filter(body.ID)
