@@ -98,7 +98,10 @@ table.table-scorecard tbody tr th:first-child {
   position: sticky;
   inset-inline-start: 0; /* "left" */
 }
-
+.whip-correct, .whip-incorrect {
+  display:block;
+  text-align: left;
+}
 </style>
 {{end}}
 {{define "middle"}}
@@ -176,9 +179,18 @@ table.table-scorecard tbody tr th:first-child {
   <tr>
     <th data-sortInitialOrder="asc" class="text-nowrap">{{.Metadata.PersonTitle}}</th>
     {{ if not $.Profile.HideDistrict }}<th>District</th>{{end}}
-    <th class="text-nowrap">% Correct</th>
+    <th class="text-nowrap">{{ if $.Profile.ShowPercent}}% Correct{{end}}</th>
     {{range .Data}}
-    <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .WhipCount.PercentCorrect }}">{{printf "%0.1f%%" .WhipCount.PercentCorrect }}</th>
+    <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .WhipCount.PercentCorrect }}">
+      {{ if $.Profile.ShowPercent}}
+        {{printf "%0.1f%%" .WhipCount.PercentCorrect }}
+      {{else}}
+        {{with .WhipCount }}
+        <span class="whip-correct">{{if .Correct}}👍 {{.Correct}}{{else}}&nbsp;{{end}}</span>
+        <span class="whip-incorrect">{{if .Incorrect}}👎 {{.Incorrect}}{{else}}&nbsp;{{end}}</span>
+        {{end}}
+      {{end}}
+    </th>
     {{end}}
   </tr>
 </thead>
