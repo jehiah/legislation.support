@@ -88,24 +88,50 @@ func (s Score) CSS() string {
 
 }
 
-func (c ScoredBookmark) PercentCorrect() float64 {
-	if len(c.Scores) == 0 {
-		return 0
-	}
-	have := 0
-	for _, s := range c.Scores {
-		have += s.Score()
-	}
-	return (float64(have) / float64(len(c.Scores))) * 100
+type WhipCount struct {
+	Correct   int
+	Incorrect int
+	Total     int
 }
 
-func (c Scorecard) PercentCorrect(idx int) float64 {
-	if len(c.Data) == 0 {
+// PercentCorrect returns in the range [0, 100]
+func (w WhipCount) PercentCorrect() float64 {
+	if w.Total == 0 {
 		return 0
 	}
-	have := 0
-	for _, cc := range c.Data {
-		have += cc.Scores[idx].Score()
+	return (float64(w.Correct) / float64(w.Total)) * 100
+}
+
+// Percent returns in the range [-100, 100]
+func (w WhipCount) Percent() float64 {
+	if w.Total == 0 {
+		return 0
 	}
-	return (float64(have) / float64(len(c.Data))) * 100
+	return (float64(w.Correct-w.Incorrect) / float64(w.Total)) * 100
+}
+
+func (c ScoredBookmark) WhipCount() (w WhipCount) {
+	for _, s := range c.Scores {
+		w.Total += 1
+		switch s.Score() {
+		case 1:
+			w.Correct += 1
+		case -1:
+			w.Incorrect += 1
+		}
+	}
+	return
+}
+
+func (c Scorecard) WhipCount(idx int) (w WhipCount) {
+	for _, cc := range c.Data {
+		w.Total += 1
+		switch cc.Scores[idx].Score() {
+		case 1:
+			w.Correct += 1
+		case -1:
+			w.Incorrect += 1
+		}
+	}
+	return
 }

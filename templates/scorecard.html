@@ -178,7 +178,7 @@ table.table-scorecard tbody tr th:first-child {
     {{ if not $.Profile.HideDistrict }}<th>District</th>{{end}}
     <th class="text-nowrap">% Correct</th>
     {{range .Data}}
-    <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .PercentCorrect }}">{{printf "%0.1f%%" .PercentCorrect }}</th>
+    <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .WhipCount.PercentCorrect }}">{{printf "%0.1f%%" .WhipCount.PercentCorrect }}</th>
     {{end}}
   </tr>
 </thead>
@@ -188,7 +188,7 @@ table.table-scorecard tbody tr th:first-child {
 <tr>
   <th class="full-name">{{$p.FullName}}</th>
   {{ if not $.Profile.HideDistrict }}<th class="district">{{$p.District}}</th>{{end}}
-  <td class="percent-correct number" data-percent="{{printf "%0.1f%%" ($S.PercentCorrect $i) }}">{{printf "%0.1f%%" ($S.PercentCorrect $i) }}</td>
+  <td class="percent-correct number" data-percent="{{printf "%0.1f%%" ($S.WhipCount $i).Percent }}">{{printf "%0.1f%%" ($S.WhipCount $i).Percent }}</td>
   {{range $S.Data}}
     <td class="score {{(index .Scores $i).CSS}} " data-text="{{(index .Scores $i).Score}}">{{(index .Scores $i).Status}}</td>
   {{end}}
