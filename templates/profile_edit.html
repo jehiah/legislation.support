@@ -57,10 +57,6 @@ body {
 {{ end }}
 </div>
 
-<!-- <div class="row">
-  <p>What <strong>Legislation</strong> do you <strong>Support</strong>?</p>
-</div> -->
-
 
 <div class="row" id="message-success" style="display: none;">
   <div class="alert alert-success d-flex align-items-center" role="alert">
@@ -78,7 +74,7 @@ body {
 
 
 {{ if .Message.Error }}
-<div class="row" id="message-error">
+<div class="row" id="message-error-temp">
   <div class="alert alert-danger d-flex align-items-center" role="alert">
     <i class="bi bi-check2-circle text-danger"></i>
     <div>{{.Message.Error}}</div>
@@ -86,7 +82,7 @@ body {
 </div>
 <script type="module">
   setTimeout(() => {
-  document.getElementById("message-error").remove()
+  document.getElementById("message-error-temp").remove()
 }, 1000 * 10);
 </script>
 {{end }}
@@ -250,14 +246,17 @@ body {
   <p><a href="" onclick="document.getElementById('archived').style.display='block'; document.getElementById('show-archived').style.display='none'; return false; ">See {{len .ArchivedBookmarks}} saved bills from past legislative sessions</a></p>
 </div>
 {{end}}
+
 <div id="archived" style="display: none;">
   <div class="row mt-5">
     <h3>Archived</h3>
   </div>
+
   {{range .ArchivedBookmarks}}
   <div class="row bookmark" data-tags="{{JoinTags .DisplayTags}}">
     <div class="row1">
-    <div class="legislation-id">
+      <div class="edit-bookmark float-end"><a href="#" class="edit" data-legislationid="{{.LegislationID}}" data-bodyid="{{.BodyID}}"><i class="bi bi-pencil-square"></i> edit</a></div>
+      <div class="legislation-id">
       {{if and .Legislation.SameAs (not .Body.UpperHouse) }}
       <a href="{{LegislationLink .BodyID .Legislation.SameAs}}">{{LegislationDisplayID .BodyID .Legislation.SameAs}}</a> /
       {{end}}
@@ -278,7 +277,7 @@ body {
       {{end}}
     </div>
   </div>
-{{end}}
+  {{end}}
 </div> 
 
 </div>
@@ -384,7 +383,9 @@ body {
 
 {{ define "javascript" }}
 <script type="module">
-  const bookmarks = new Map({{.Bookmarks}}.map(d => [d.BodyID + d.LegislationID, d]))
+  const a = {{.Bookmarks}}
+  a.push(...{{.ArchivedBookmarks }})
+  const bookmarks = new Map(a.map(d => [d.BodyID + d.LegislationID, d]))
 
   document.getElementById('legislation-url').addEventListener("change", _ => {
     document.getElementById('tag-row').style.display=''
@@ -410,7 +411,7 @@ Array.from(document.querySelectorAll('.needs-validation')).forEach(form => {
   const bsOffcanvas = new bootstrap.Offcanvas('#offcanvasRight')
 
   const editProfileLinks = document.querySelectorAll("a.edit-profile")
- const editProfileLinksEl = [...editProfileLinks].forEach(el => {
+  const editProfileLinksEl = [...editProfileLinks].forEach(el => {
     el.addEventListener("click", event => {
       event.preventDefault()
       document.getElementById('edit-form').style.display = 'none'

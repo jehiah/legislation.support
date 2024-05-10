@@ -173,12 +173,14 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 		ArchivedBookmarks account.Bookmarks
 	}
 	body := Page{
-		Message:     message,
-		Title:       profile.Name + " (legislation.support)",
-		Profile:     *profile,
-		EditMode:    uid == profile.UID,
-		UID:         uid,
-		SelectedTag: r.Form.Get("tag"),
+		Message:           message,
+		Title:             profile.Name + " (legislation.support)",
+		Profile:           *profile,
+		EditMode:          uid == profile.UID,
+		UID:               uid,
+		SelectedTag:       r.Form.Get("tag"),
+		Bookmarks:         make(account.Bookmarks, 0),
+		ArchivedBookmarks: make(account.Bookmarks, 0),
 	}
 	if body.EditMode {
 		templateName = "profile_edit.html"
