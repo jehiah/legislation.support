@@ -202,5 +202,8 @@ func (n NYC) IntroJSON(ctx context.Context, u string) (*db.Legislation, error) {
 	if err != nil {
 		return nil, err
 	}
+	if d.File == "" {
+		return nil, nil
+	}
 	return &d, err
 }
