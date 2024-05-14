@@ -100,7 +100,12 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	a.addExpireHeaders(w, time.Hour*24*7)
-	io.WriteString(w, "# robots welcome\n# https://github.com/jehiah/legislation.support\n")
+	io.WriteString(w, `# robots welcome
+# https://github.com/jehiah/legislation.support
+
+User-agent: *
+Disallow: /__/
+`)
 }
 
 func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
