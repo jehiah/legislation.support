@@ -206,7 +206,8 @@ func main() {
 	}
 	router.HandleFunc("GET /{profile}", app.Profile)
 	router.HandleFunc("GET /{profile}/changes", app.ProfileChanges)
-	router.HandleFunc("GET /{profile}/changes.json", app.ProfileChanges)
+	router.HandleFunc("GET /{profile}/changes.xml", app.ProfileChanges)  // RSS
+	router.HandleFunc("GET /{profile}/changes.json", app.ProfileChanges) // Json feed
 	router.HandleFunc("GET /{profile}/scorecard/{body}", app.Scorecard)
 
 	router.HandleFunc("POST /data/profile", app.ProfilePost)

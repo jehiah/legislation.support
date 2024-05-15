@@ -121,12 +121,48 @@ func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
 		a.ProfileChangesJSON(w, r, *profile, body.Changes)
 		return
 	}
+	if strings.HasSuffix(r.URL.Path, "/changes.xml") {
+		a.ProfileChangesRSS(w, r, *profile, body.Changes)
+		return
+	}
 
 	err = t.ExecuteTemplate(w, templateName, body)
 	if err != nil {
 		log.WithField("uid", uid).Error(err)
 		a.WebInternalError500(w, "")
 	}
+}
+
+func (a *App) ProfileChangesRSS(w http.ResponseWriter, r *http.Request, profile account.Profile, changes []Change) {
+	feed := &feeds.Feed{
+		Title:       profile.Name,
+		Link:        &feeds.Link{Href: profile.FullLink() + "/changes"},
+		Description: "Recent Sponsor Changes",
+	}
+
+	for _, c := range changes {
+		action := "Sponsored"
+		if c.SponsorChange.Withdraw {
+			action = "Sponsor Withdrawn"
+		}
+
+		feed.Items = append(feed.Items, &feeds.Item{
+			Title:       fmt.Sprintf("%s %s by %s %s", c.Legislation.DisplayID, action, c.Body.MemberName, c.SponsorChange.Member.FullName),
+			Link:        &feeds.Link{Href: c.Legislation.URL},
+			Description: c.Legislation.Title,
+			Id:          fmt.Sprintf("%s-%s-%s", c.Legislation.Body, c.Legislation.DisplayID, c.SponsorChange.Member.ID()),
+			Created:     c.SponsorChange.Date,
+			Updated:     c.SponsorChange.Date,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/atom+xml")
+	err := feed.WriteAtom(w)
+	if err != nil {
+		log.Printf("error writing rss %s", err)
+		apiresponse.InternalError500(w)
+	}
+
 }
 
 func (a *App) ProfileChangesJSON(w http.ResponseWriter, r *http.Request, profile account.Profile, changes []Change) {

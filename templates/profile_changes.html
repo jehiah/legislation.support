@@ -48,6 +48,10 @@
   font-weight: 600;
   /* font-size:.8rem; */
 }
+.rss {
+  color: var(--brand-dark);
+  text-decoration: none;
+}
 
 </style>
 <link rel="alternate" title="{{.Profile.Name}} Sponsor Changes" type="application/feed+json" href="{{.Profile.FullLink}}/changes.json" />
@@ -74,6 +78,13 @@
 
 <div class="bookmarks">
 
+  <div class="clearfix">
+
+  <div class="float-end">
+    <a href="{{.Profile.Link}}/changes.xml" class="rss">Subscribe to RSS Feed <i class="bi bi-rss"></i></a>
+  </div>
+
+</div>
 {{if not .Changes }}
 <div class="row">
 <p>No recent changes</p>

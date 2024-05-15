@@ -178,6 +178,13 @@ type Member struct {
 	// TODO: party?
 }
 
+func (m Member) ID() string {
+	if m.NumericID != 0 {
+		return fmt.Sprintf("%d", m.NumericID)
+	}
+	return m.Slug
+}
+
 type SponsorChange struct {
 	Withdraw bool `firestore:",omitempty"`
 	Date     time.Time
