@@ -23,6 +23,7 @@ func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bil
 	}
 	path := fmt.Sprintf("/api/3/bills/%s/%s", url.PathEscape(session), url.PathEscape(printNo))
 	var data BillResponse
+	log.WithContext(ctx).WithField("session", session, "printNo", printNo).Infof("looking up bill %s-%s", session, printNo)
 	err := a.get(ctx, path, nil, &data)
 	return &(data.Bill), err
 }
@@ -34,7 +35,7 @@ func (a NYSenateAPI) get(ctx context.Context, path string, params *url.Values, v
 	params.Set("key", a.token)
 	params.Set("view", "with_refs")
 	u := apiDomain + path
-	log.WithContext(ctx).WithField("nysenate_api", u+"?"+params.Encode()).Info("looking up bill")
+	log.WithContext(ctx).WithField("nysenate_api", u+"?"+params.Encode()).Debug("NYSenateAPI.get")
 	req, err := http.NewRequestWithContext(ctx, "GET", u+"?"+params.Encode(), nil)
 	if err != nil {
 		return err
