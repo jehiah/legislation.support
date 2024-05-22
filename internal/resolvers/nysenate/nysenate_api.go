@@ -85,6 +85,7 @@ func (b Bill) GetSponsors() []MemberEntry {
 		b.Sponsor.Member,
 	}
 	seen := make(map[int]bool)
+	// TODO: look at current ammendment only
 	for _, a := range b.Amendments.Items {
 		for _, m := range a.CoSponsors.Items {
 			if seen[m.MemberID] {

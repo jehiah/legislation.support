@@ -132,6 +132,9 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 	if err != nil {
 		return nil, err
 	}
+	if strings.HasPrefix(printNo, "S") {
+		return bill.Legislation(a.body.Bicameral), nil
+	}
 	return bill.Legislation(a.body.ID), nil
 }
 
