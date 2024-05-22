@@ -20,7 +20,8 @@ func (a *App) User(r *http.Request) account.UID {
 	if err != nil {
 		return ""
 	}
-	decoded, err := a.firebase.VerifySessionCookieAndCheckRevoked(r.Context(), cookie.Value)
+	// VerifySessionCookieAndCheckRevoked would make a server side call to check if it's revoked
+	decoded, err := a.firebase.VerifySessionCookie(r.Context(), cookie.Value)
 	if err != nil {
 		return ""
 	}
@@ -90,6 +91,7 @@ func (a *App) SignOut(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", 302)
 }
 
+// NewSession handles POST /data/session at the end of authentication
 func (a *App) NewSession(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var body SessionRequest
@@ -118,7 +120,7 @@ func (a *App) NewSession(w http.ResponseWriter, r *http.Request) {
 		Value:    cookie,
 		MaxAge:   int(expiresIn.Seconds()),
 		HttpOnly: true,
-		Secure:   !a.devMode,
+		Secure:   true,
 		Path:     "/",
 	})
 	w.Write([]byte(`{"status": "success"}`))

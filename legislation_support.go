@@ -135,6 +135,7 @@ func (a *App) WebError(w http.ResponseWriter, code int, msg string) {
 		Code    int
 		Message string
 	}
+	w.WriteHeader(code)
 	t := newTemplate(a.templateFS, "error.html")
 	err := t.ExecuteTemplate(w, "error.html", Page{
 		Title:   fmt.Sprintf("HTTP Error %d", code),

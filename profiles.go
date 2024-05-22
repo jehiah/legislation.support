@@ -182,13 +182,14 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 		Bookmarks:         make(account.Bookmarks, 0),
 		ArchivedBookmarks: make(account.Bookmarks, 0),
 	}
+
 	if body.EditMode {
 		templateName = "profile_edit.html"
 		t = newTemplate(a.templateFS, "profile_edit.html")
 	}
 	b, err := a.GetProfileBookmarks(ctx, profileID)
 	if err != nil {
-		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%s", err)
 		a.WebInternalError500(w, "")
 		return
 	}
@@ -220,7 +221,7 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 
 	err = t.ExecuteTemplate(w, templateName, body)
 	if err != nil {
-		log.WithField("uid", uid).Error(err)
+		log.WithField("uid", uid).Errorf("error %s", err)
 		a.WebInternalError500(w, "")
 	}
 }
