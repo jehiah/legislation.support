@@ -23,7 +23,7 @@ func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bil
 	}
 	path := fmt.Sprintf("/api/3/bills/%s/%s", url.PathEscape(session), url.PathEscape(printNo))
 	var data BillResponse
-	log.WithContext(ctx).WithField("session", session, "printNo", printNo).Infof("looking up bill %s-%s", session, printNo)
+	log.WithContext(ctx).WithField("session", session).WithField("printNo", printNo).Infof("looking up bill %s-%s", session, printNo)
 	err := a.get(ctx, path, nil, &data)
 	return &(data.Bill), err
 }

@@ -113,6 +113,21 @@ func (b Bookmark) DisplayTags() []DisplayTag {
 	return out
 }
 
+// FilterTag
+func (b Bookmarks) FilterTag(tag string) Bookmarks {
+	var out Bookmarks
+	for _, bb := range b {
+		for _, t := range bb.Tags {
+			if t == tag {
+				out = append(out, bb)
+				break
+			}
+		}
+	}
+	return out
+}
+
+
 // Filter includes items that match any of the selected bodies
 func (b Bookmarks) Filter(body ...legislature.BodyID) Bookmarks {
 	var out Bookmarks

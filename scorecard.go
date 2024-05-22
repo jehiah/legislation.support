@@ -15,6 +15,7 @@ import (
 func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 	t := newTemplate(a.templateFS, "scorecard.html")
 	ctx := r.Context()
+	r.ParseForm()
 
 	profileID := account.ProfileID(r.PathValue("profile"))
 	if !account.IsValidProfileID(profileID) {
@@ -87,6 +88,11 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 
 	// bookmarks := b.Active().Filter(body.ID)
 	bookmarks := b.Active().Filter(body.ID, body.Bicameral)
+
+	if t := r.Form.Get("tag"); t != "" {
+		bookmarks = bookmarks.FilterTag(t)
+		pageBody.Title = fmt.Sprintf("%s %s Scorecard %s", profile.Name, body.Name, t)
+	}
 
 	sort.Sort(account.SortedBookmarks(bookmarks))
 	var scorable []legislature.Scorable

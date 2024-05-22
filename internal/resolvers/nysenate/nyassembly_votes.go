@@ -38,7 +38,7 @@ func (a NYSenateAPI) AssemblyVotes(ctx context.Context, members []legislature.Me
 
 	var bill Bill
 	bill.Votes.Items, err = parseAssemblyVotes(resp.Body, members)
-	log.WithContext(ctx).WithField("nyassembly", u).WithField("votes", len(bill.Votes.Items)).Info("looking up NYAssembly votes %s-%s", session, printNo)
+	log.WithContext(ctx).WithField("nyassembly", u).WithField("votes", len(bill.Votes.Items)).Infof("looking up NYAssembly votes %s-%s", session, printNo)
 	return &bill, err
 }
 
