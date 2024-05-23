@@ -185,8 +185,16 @@ func (b Bill) GetVotes() VoteEntries {
 				// TODO: add note "with reservations"
 			})
 		}
-		// ABSENT ?
-		// Abstained ?
+		for _, m := range v.MemberVotes.Items.Absent.Items {
+			o = append(o, VoteEntry{
+				ShortName: m.ShortName,
+				MemberID:  m.MemberID,
+				Chamber:   m.Chamber,
+				VoteType:  v.VoteType,
+				Vote:      "Absent",
+			})
+		}
+		// TODO: Abstained ?
 	}
 	return o
 }
@@ -387,6 +395,7 @@ type MemberVotes struct {
 	AyeWithReservations MemberEntryList `json:"AYEWR"`
 	Nay                 MemberEntryList `json:"NAY"` // ?
 	Excused             MemberEntryList `json:"EXC"` // excused
+	Absent              MemberEntryList `json:"Absent"`
 }
 
 // Note: response might have duplicates

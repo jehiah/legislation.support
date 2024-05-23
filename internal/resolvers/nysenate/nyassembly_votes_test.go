@@ -18,7 +18,7 @@ func TestAssemblyVotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%#v", bill.Votes.Items)
+	// t.Logf("%#v", bill.Votes.Items)
 	if len(bill.Votes.Items) != 4 {
 		t.Fatalf("expected 4 votes got %d", len(bill.Votes.Items))
 	}
@@ -27,6 +27,19 @@ func TestAssemblyVotes(t *testing.T) {
 		if v.MemberID == 0 {
 			t.Logf("[%d] unknown member %#v", i, v)
 		}
+	}
+
+	// this bill has "Held for consideration" votes that should be skipped
+	bill, err = a.AssemblyVotes(ctx, m, "2023", "A06141")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// t.Logf("%#v", bill.Votes.Items)
+	if len(bill.Votes.Items) < 1 {
+		t.Fatalf("expected 1 votes got %d", len(bill.Votes.Items))
+	}
+	if bill.Votes.Items[0].VoteType != "Held for Consideration" {
+		t.Fatalf("expected Held for Consideration got %s", bill.Votes.Items[0].VoteType)
 	}
 
 }

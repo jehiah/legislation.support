@@ -103,13 +103,21 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 				}
 			}
 
-			// FIXME: https://github.com/nysenate/OpenLegislation/issues/122
+			// Assembly votes are not exposed in the NY Senate API
+			// https://github.com/nysenate/OpenLegislation/issues/122
 			if c == assemblyChamber {
 				extraVotes, err := a.AssemblyVotes(ctx, people, billSession, basePrintNo)
 				if err != nil {
 					return err
 				}
-				billData.Votes.Items = append(billData.Votes.Items, extraVotes.Votes.Items...)
+				for _, vi := range extraVotes.Votes.Items {
+					if vi.VoteType == "Held for Consideration" {
+						// https://nyassembly.gov/leg/?default_fld=&leg_video=&bn=A06141&term=&Summary=Y&Actions=Y&Committee%26nbspVotes=Y&Floor%26nbspVotes=Y&Text=Y
+						// Some bills are "Held for Consideration" which doesn't represent a vote for the bill - it's a vote to hold a bill
+						continue
+					}
+					billData.Votes.Items = append(billData.Votes.Items, vi)
+				}
 			}
 
 			scores := make(map[int]string)

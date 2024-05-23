@@ -49,9 +49,10 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 	}
 	var out []BillVote
 	z := html.NewTokenizer(r)
-	var inTable, inCaption, date bool
-	var text, dateStr, caption string
+	var inTable, inCaption, dateNext, committeeNext bool
+	var text, dateStr, caption, commitee string
 	var tokens []string
+
 	for {
 		tt := z.Next()
 		token := z.Token()
@@ -66,10 +67,16 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 			text += strings.TrimSpace(token.Data)
 			switch {
 			case inCaption && text == "DATE:":
-				date = true
-			case inCaption && date:
+				dateNext = true
+			case inCaption && text == "Committee:":
+				committeeNext = true
+			case inCaption && committeeNext:
+				commitee, _, _ = strings.Cut(token.Data, "Chair:")
+				commitee = strings.TrimSpace(commitee)
+				committeeNext = false
+			case inCaption && dateNext:
 				dateStr = text
-				date = false
+				dateNext = false
 			case inCaption:
 				caption += token.Data
 			}
@@ -77,6 +84,10 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 			switch token.Data {
 			case "table":
 				inTable = true
+				inCaption = false
+				dateNext = false
+				committeeNext = false
+				caption = ""
 			case "td":
 				text = ""
 			case "caption":
@@ -85,17 +96,19 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 		case html.EndTagToken:
 			switch token.Data {
 			case "td":
-				if text != "" && inTable {
+				if text != "" && inTable && !inCaption {
 					tokens = append(tokens, text)
 					// log.Printf("td %s", text)
 				}
 			case "table":
 				inTable = false
+				_, action, _ := strings.Cut(caption, "Action:")
 				bv := BillVote{
 					VoteDate: dateStr,
+					VoteType: strings.TrimSpace(action), // Favorable refer to committee Ways and Means
 				}
 				bv.Committee.Chamber = "ASSEMBLY"
-				bv.Committee.Name = caption
+				bv.Committee.Name = commitee
 				mv := MemberVotes{}
 				for i := 0; i+1 < len(tokens); i += 2 {
 					shortName := strings.ToUpper(tokens[i])
@@ -114,6 +127,12 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 						})
 					case "ER", "Excused":
 						mv.Excused.Items = append(mv.Excused.Items, MemberEntry{
+							MemberID:  memberLookup[shortName],
+							Chamber:   bv.Committee.Chamber,
+							ShortName: shortName,
+						})
+					case "Absent":
+						mv.Absent.Items = append(mv.Absent.Items, MemberEntry{
 							MemberID:  memberLookup[shortName],
 							Chamber:   bv.Committee.Chamber,
 							ShortName: shortName,
