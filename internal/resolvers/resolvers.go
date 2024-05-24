@@ -1,6 +1,8 @@
 package resolvers
 
 import (
+	"context"
+	"net/url"
 	"os"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
@@ -45,6 +47,10 @@ var Resolvers = legislature.Resolvers{
 	nyc.New(NYCCouncil),
 	nysenate.NewNYSenate(NYSenate, os.Getenv("NY_SENATE_TOKEN")),
 	nysenate.NewNYAssembly(NYAssembly, os.Getenv("NY_SENATE_TOKEN")),
+}
+
+func Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
+	return Resolvers.Lookup(ctx, u)
 }
 
 var Bodies map[legislature.BodyID]legislature.Body = map[legislature.BodyID]legislature.Body{

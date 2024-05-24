@@ -40,6 +40,7 @@ func (a NYSenateAPI) get(ctx context.Context, path string, params *url.Values, v
 	if err != nil {
 		return err
 	}
+	req.Header.Set("User-Agent", "https://legislation.support/")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err

@@ -13,6 +13,7 @@ import (
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/apiresponse"
 	"github.com/jehiah/legislation.support/internal/legislature"
+	"github.com/jehiah/legislation.support/internal/metadatasites"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	log "github.com/sirupsen/logrus"
 )
@@ -321,20 +322,27 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 			}
 			output[i] = o
 			o.record(func() error {
-				var u *url.URL
+				var u, matchedURL *url.URL
 				u, err := url.Parse(legUrl)
 				if err != nil {
 					return err
 				}
 				logFields := log.Fields{"uid": uid, "profileID": profileID, "legislation_url": u.String()}
-				log.WithContext(ctx).WithFields(logFields).Infof("parsed URL")
+				log.WithContext(ctx).WithFields(logFields).Infof("parsed URL host:%s", u.Hostname())
 				var bill *legislature.Legislation
-				bill, err = resolvers.Resolvers.Lookup(r.Context(), u)
+				matchedURL, err = metadatasites.Lookup(r.Context(), u)
+				if err != nil {
+					log.WithContext(ctx).WithFields(logFields).Errorf("metadatasites.Lookup error %#v", err)
+				}
+				if matchedURL.Hostname() != u.Hostname() {
+					log.WithContext(ctx).WithFields(logFields).Infof("metadatasites found URL %q", matchedURL)
+				}
+				bill, err = resolvers.Lookup(r.Context(), matchedURL)
 				if err != nil {
 					return err
 				}
 				if bill == nil {
-					return fmt.Errorf("Legislation matching url %q not found", u)
+					return fmt.Errorf("legislation matching url %q not found", u)
 
 				}
 				body := resolvers.Bodies[bill.Body]

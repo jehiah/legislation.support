@@ -121,6 +121,31 @@ func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
 	return nil, e
 }
 
+// MetadataSite is a site that indexes legislation but is not authoritative (i.e. indexes bills from multiple legislators)
+//
+// i.e. https://www.billtrack50.com
+type MetadataSite interface {
+	Lookup(ctx context.Context, u *url.URL) (*url.URL, error)
+}
+type MetadataSites []MetadataSite
+
+// Lookup returns a URL to the canonical source of the legislation (or returns u)
+func (m MetadataSites) Lookup(ctx context.Context, u *url.URL) (*url.URL, error) {
+	var e error
+	for _, mm := range m {
+		d, err := mm.Lookup(ctx, u)
+		if err != nil {
+			e = err
+			// try others first and defer last error till end
+			continue
+		}
+		if d != nil {
+			return d, nil
+		}
+	}
+	return u, e
+}
+
 func GenericLegislationSort(a, b *Legislation) bool {
 	switch {
 	case a.Body != b.Body:

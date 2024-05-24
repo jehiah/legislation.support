@@ -1,12 +1,29 @@
 package congress
 
+import "github.com/jehiah/legislation.support/internal/legislature"
+
 // https://www.congress.gov/bill/117th-congress/house-bill/8555?s=4&r=1
-// propublica
+// https://www.congress.gov/bill/117th-congress/senate-bill/874
 
-// https://api.propublica.org/congress/{version}/
-// GET https://api.propublica.org/congress/v1/bills/search.json?query={query}
-// "https://api.propublica.org/congress/v1/117/bills/hr8555.json",
+// https://api.congress.gov/
 
-// ENV PRO_PUBLICA_CONGRESS_API_KEY
+// ENV CONGRESS_GOV_APIKEY
 
 // curl -H "X-API-Key: $PRO_PUBLICA_CONGRESS_API_KEY" "https://api.propublica.org/congress/v1/117/bills/hr8555.json"
+
+type Congress struct {
+	body legislature.Body
+	api  *CongressAPI
+}
+type CongressAPI struct {
+	token string
+}
+
+func NewAPI(token string) *CongressAPI {
+	if token == "" {
+		panic("missing api key")
+	}
+	return &CongressAPI{
+		token: token,
+	}
+}

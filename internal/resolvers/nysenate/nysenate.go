@@ -94,10 +94,10 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 	}
 	p := nysenatePattern.FindStringSubmatch(u.Path)
 	if len(p) != 6 {
-		log.Printf("no match %#v %s", p, u.String())
+		log.Debugf("NYSenate no match %#v %s", p, u.String())
 		return nil, nil
 	}
-	log.Printf("found nysenate URL %s", u.String())
+	log.Infof("found nysenate URL %s", u.String())
 	session, printNo := p[1], p[3]
 	bill, err := a.api.GetBill(ctx, session, printNo)
 	if err != nil {
@@ -112,7 +112,7 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 	case "www.nysenate.gov":
 		p := nyAssemblyPattern.FindStringSubmatch(u.Path)
 		if len(p) != 6 {
-			log.Infof("no match %#v %s", p, u.String())
+			log.Debugf("NYAssembly no match %#v %s", p, u.String())
 			return nil, nil
 		}
 		log.Infof("found nysenate URL %s", u.String())

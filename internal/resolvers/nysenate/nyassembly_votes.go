@@ -30,6 +30,7 @@ func (a NYSenateAPI) AssemblyVotes(ctx context.Context, members []legislature.Me
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", "https://legislation.support/")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
