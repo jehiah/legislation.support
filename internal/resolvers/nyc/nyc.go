@@ -191,7 +191,7 @@ func (n NYC) get(ctx context.Context, u string, v interface{}) error {
 		return nil
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("got http %d", resp.StatusCode)
+		return fmt.Errorf("got http %d from %q", resp.StatusCode, r.URL.String())
 	}
 	return json.NewDecoder(resp.Body).Decode(&v)
 }
