@@ -56,8 +56,14 @@ func (a *App) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profi
 	return out, nil
 }
 
+// GetStaleBills gets bills in an active session that have not been checked recently
 func (a *App) GetStaleBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
-	iter := a.firestore.CollectionGroup("bills").OrderBy("Added", firestore.Desc).Limit(limit).Documents(ctx)
+	target := time.Hour * 6
+	now := time.Now().UTC()
+	cutoff := now.Add(-1 * target)
+	iter := a.firestore.CollectionGroup("bills").Where(
+		"LastChecked", "<", cutoff).Where(
+		"Session.EndYear", ">=", now.Year()).Limit(limit).Documents(ctx)
 	defer iter.Stop()
 	var out []legislature.Legislation
 	for {
@@ -73,9 +79,7 @@ func (a *App) GetStaleBills(ctx context.Context, limit int) ([]legislature.Legis
 		if err != nil {
 			return nil, err
 		}
-		if o.IsStale() {
-			out = append(out, o)
-		}
+		out = append(out, o)
 	}
 	return out, nil
 }

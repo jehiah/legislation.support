@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/jehiah/legislation.support/internal/concurrentlimit"
 	"github.com/jehiah/legislation.support/internal/resolvers"
@@ -23,6 +24,13 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	ctx := r.Context()
 	limit := 500
+	if r.Form.Get("limit") != "" {
+		limit, _ = strconv.Atoi(r.Form.Get("limit"))
+		if limit > 2000 || limit < 1 {
+			limit = 500
+		}
+	}
+
 	bills, err := a.GetStaleBills(ctx, limit)
 	if err != nil {
 		log.Printf("err %s", err)

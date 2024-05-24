@@ -37,31 +37,29 @@ type Legislation struct {
 	LastChecked time.Time // when we last checked for updates
 }
 
-func (l Legislation) IsStale() bool {
-	if l.LastChecked.IsZero() {
-		return true
-	}
-	if len(l.Sponsors) == 0 {
-		return true
-	}
+// func (l Legislation) IsStale(cutoff time.Time) bool {
+// 	if l.LastChecked.IsZero() {
+// 		return true
+// 	}
+// 	if len(l.Sponsors) == 0 {
+// 		return true
+// 	}
 
-	if !l.Session.Active() {
-		return false
-	}
-	// target := time.Hour * 12
-	target := time.Hour
+// 	if !l.Session.Active() {
+// 		return false
+// 	}
 
-	// // shorter timeframe for bicameral bills that don't have SameAs yet
-	// if l.SameAs == "" && l.Body != "nyc" {
-	// 	// TODO: don't hard code body
-	// 	target = time.Hour * 24 * 2
-	// }
+// 	// // shorter timeframe for bicameral bills that don't have SameAs yet
+// 	// if l.SameAs == "" && l.Body != "nyc" {
+// 	// 	// TODO: don't hard code body
+// 	// 	target = time.Hour * 24 * 2
+// 	// }
 
-	if l.LastChecked.Before(time.Now().Add(target * -1)) {
-		return true
-	}
-	return false
-}
+// 	if l.LastChecked.Before(cutoff) {
+// 		return true
+// 	}
+// 	return false
+// }
 
 // func (l Legislation) Key() string {
 // 	return string(l.Body) + "." + string(l.ID)
