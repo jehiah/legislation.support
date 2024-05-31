@@ -117,6 +117,31 @@ func (db *Datastore) GetRecentBills(ctx context.Context, limit int) ([]legislatu
 	return out, nil
 }
 
+// GetAllBills iterates over all bills
+func (db *Datastore) GetAllBills(ctx context.Context, callback func(l legislature.Legislation) error) error {
+	iter := db.firestore.CollectionGroup("bills").Documents(ctx)
+	defer iter.Stop()
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		var o legislature.Legislation
+		err = doc.DataTo(&o)
+		if err != nil {
+			return err
+		}
+		err = callback(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // func (db *Datastore) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
 // 	query := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
 // 	// ref := db.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
