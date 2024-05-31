@@ -217,16 +217,20 @@ func (db *Datastore) GetBookmark(ctx context.Context, p account.ProfileID, key s
 	return &b, err
 }
 
-func (app *Datastore) UpdateBill(ctx context.Context, a, b legislature.Legislation) error {
+// UpdateBill updates a with a newer copy b. It's expected that a is already in the DB
+func (app *Datastore) UpdateBill(ctx context.Context, a, b legislature.Legislation) (staleSameAs bool, err error) {
+	if a.SameAs == "" && b.SameAs != "" {
+		staleSameAs = true
+	}
 
 	changes := legislature.CalculateSponsorChanges(a, b)
 	if len(changes) > 0 {
-		log.Printf("debug changes %s %s %#v", b.Body, b.ID, changes)
+		log.Debugf("changes %s %s %#v", b.Body, b.ID, changes)
 		changesArray := make([]interface{}, len(changes))
 		for i := range changes {
 			changesArray[i] = changes[i]
 		}
-		_, err := app.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
+		_, err = app.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
 			{Path: "Sponsors", Value: firestore.ArrayUnion(changesArray...)},
 		})
 		if err != nil && IsNotFound(err) {
@@ -234,67 +238,41 @@ func (app *Datastore) UpdateBill(ctx context.Context, a, b legislature.Legislati
 				Sponsors: changes,
 			})
 			if err != nil {
-				log.Printf("err setting changes %s", err)
+				return
 			}
 		} else if err != nil {
-			log.Printf("err setting changes %s", err)
+			return
 		}
 	}
 
 	b.LastChecked = time.Now().UTC()
-	_, err := app.firestore.Collection("bodies").Doc(string(a.Body)).Collection("bills").Doc(string(a.ID)).Set(ctx, b)
-	return err
+	_, err = app.firestore.Collection("bodies").Doc(string(a.Body)).Collection("bills").Doc(string(a.ID)).Set(ctx, b)
+	return
 }
 
-func (db *Datastore) SaveBill(ctx context.Context, b legislature.Legislation) error {
+// SaveBill creates a bill in the database or updates an existing bill with a diff of SponsorChanges
+//
+// If SameAs is set and it doesn't exist in the database `staleSameAs` will be set to true
+func (db *Datastore) SaveBill(ctx context.Context, b legislature.Legislation) (staleSameAs bool, err error) {
 	b.Added = time.Now().UTC()
 	b.LastChecked = time.Now().UTC()
-	_, err := db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
+	_, err = db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
 	if IsAlreadyExists(err) {
-		var bb *legislature.Legislation
-		bb, err = db.GetBill(ctx, b.Body, b.ID)
+		var a *legislature.Legislation
+		a, err = db.GetBill(ctx, b.Body, b.ID)
 		if err != nil {
-			return err
+			return
 		}
-		bb.IntroducedDate = b.IntroducedDate
-		bb.LastModified = b.LastModified
-		bb.LastChecked = time.Now().UTC()
-		bb.Session = b.Session
-		bb.Title = b.Title
-		bb.Description = b.Description
-		bb.Summary = b.Summary
-		bb.Status = b.Status
-		bb.SameAs = b.SameAs
-		bb.SubstitutedBy = b.SubstitutedBy
-
-		changes := legislature.CalculateSponsorChanges(*bb, b)
-		if len(changes) > 0 {
-			log.Printf("debug changes %s %s %#v", b.Body, b.ID, changes)
-			changesArray := make([]interface{}, len(changes))
-			for i := range changes {
-				changesArray[i] = changes[i]
-			}
-			_, err := db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
-				{Path: "Sponsors", Value: firestore.ArrayUnion(changesArray...)},
-			})
-			if err != nil && IsNotFound(err) {
-				_, err = db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Set(ctx, legislature.Changes{
-					Sponsors: changes,
-				})
-				if err != nil {
-					log.Printf("err setting changes %s", err)
-				}
-			} else if err != nil {
-				log.Printf("err setting changes %s", err)
-			}
+		staleSameAs, err = db.UpdateBill(ctx, *a, b)
+	} else if b.SameAs != "" { // inserted a new bill
+		// check if sameAs exists
+		sameAsBody := resolvers.Bodies[b.Body].Bicameral
+		_, err = db.firestore.Collection("bodies").Doc(string(sameAsBody)).Collection("bills").Doc(string(b.SameAs)).Get(ctx)
+		if IsNotFound(err) {
+			staleSameAs = true
 		}
-
-		// TODO: more
-		_, err = db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, *bb)
-
 	}
-	// TODO: handle duplicates
-	return err
+	return
 }
 
 func (db *Datastore) GetBill(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (*legislature.Legislation, error) {

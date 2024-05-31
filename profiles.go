@@ -349,9 +349,21 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 				body := resolvers.Bodies[bill.Body]
 
 				// Save refreshes a bill as well
-				err = a.SaveBill(ctx, *bill)
+				var staleSameAs bool
+				staleSameAs, err = a.SaveBill(ctx, *bill)
 				if err != nil {
 					return err
+				}
+				if staleSameAs {
+					// refresh the sameAs bill (if needed)
+					sameBill, err := resolvers.Resolvers.Find(body.Bicameral).Refresh(ctx, bill.SameAs)
+					if err != nil {
+						return err
+					}
+					_, err = a.SaveBill(ctx, *sameBill)
+					if err != nil {
+						return err
+					}
 				}
 
 				o.Bookmark, err = a.GetBookmark(ctx, profileID, account.BookmarkKey(bill.Body, bill.ID))

@@ -67,7 +67,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error fetching %s %s: %s", record.Body, record.ID, err)
 			}
-			err = db.SaveBill(ctx, *bill)
+			_, err = db.SaveBill(ctx, *bill)
 			if err != nil {
 				log.Fatalf("error saving %s %s: %s", record.Body, record.ID, err)
 			}

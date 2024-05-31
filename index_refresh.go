@@ -55,10 +55,23 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 				if r.Form.Get("dry_run") == "true" {
 					log.Printf("dry_run %#v", *udpatedLeg)
 				} else {
-					err = a.UpdateBill(ctx, l, *udpatedLeg)
+					staleSameAs, err := a.UpdateBill(ctx, l, *udpatedLeg)
 					if err != nil {
 						return err
 					}
+					if staleSameAs {
+						// refresh the sameAs bill (if needed)
+						sameAsBody := resolvers.Bodies[l.Body].Bicameral
+						sameBill, err := resolvers.Resolvers.Find(sameAsBody).Refresh(ctx, udpatedLeg.SameAs)
+						if err != nil {
+							return err
+						}
+						_, err = a.SaveBill(ctx, *sameBill)
+						if err != nil {
+							return err
+						}
+					}
+
 				}
 				return nil
 			})
