@@ -17,13 +17,13 @@ import (
 	"strings"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
 	"github.com/dustin/go-humanize"
 	"github.com/gomarkdown/markdown"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislation.support/internal/account"
+	"github.com/jehiah/legislation.support/internal/datastore"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
 	"github.com/microcosm-cc/bluemonday"
@@ -39,13 +39,14 @@ var static embed.FS
 // var americaNewYork, _ = time.LoadLocation("America/New_York")
 
 type App struct {
-	devMode   bool
-	firestore *firestore.Client
-	firebase  *auth.Client
+	devMode  bool
+	firebase *auth.Client
 
 	staticHandler http.Handler
 	templateFS    fs.FS
 	firebaseAuth  http.Handler
+
+	*datastore.Datastore
 }
 
 func commaInt(i int) string {
@@ -179,7 +180,7 @@ func main() {
 	firebase := &url.URL{Scheme: "https", Host: "legislation-support.firebaseapp.com"}
 	app := &App{
 		devMode:       *devMode,
-		firestore:     createClient(ctx),
+		Datastore:     datastore.New(datastore.NewClient(ctx)),
 		firebase:      authClient,
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,

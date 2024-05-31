@@ -1,4 +1,4 @@
-package main
+package datastore
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func createClient(ctx context.Context) *firestore.Client {
+func NewClient(ctx context.Context) *firestore.Client {
 	// Sets your Google Cloud Platform project ID.
 	projectID := "legislation-support"
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/jehiah/legislation.support/internal/account"
 	"github.com/jehiah/legislation.support/internal/apiresponse"
+	"github.com/jehiah/legislation.support/internal/datastore"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/metadatasites"
 	"github.com/jehiah/legislation.support/internal/resolvers"
@@ -382,7 +383,7 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 					Body:        &body,
 				}
 				err = a.SaveBookmark(ctx, profileID, *o.Bookmark)
-				if err != nil && !IsAlreadyExists(err) {
+				if err != nil && !datastore.IsAlreadyExists(err) {
 					return err
 				}
 				return nil

@@ -1,4 +1,4 @@
-package main
+package datastore
 
 import (
 	"context"
@@ -13,11 +13,19 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-func (a *App) GetProfile(ctx context.Context, ID account.ProfileID) (*account.Profile, error) {
+type Datastore struct {
+	firestore *firestore.Client
+}
+
+func New(firestore *firestore.Client) *Datastore {
+	return &Datastore{firestore: firestore}
+}
+
+func (db *Datastore) GetProfile(ctx context.Context, ID account.ProfileID) (*account.Profile, error) {
 	if !account.IsValidProfileID(ID) {
 		return nil, nil
 	}
-	dsnap, err := a.firestore.Collection("profiles").Doc(string(ID)).Get(ctx)
+	dsnap, err := db.firestore.Collection("profiles").Doc(string(ID)).Get(ctx)
 	if err != nil {
 		if IsNotFound(err) {
 			return nil, nil
@@ -32,9 +40,9 @@ func (a *App) GetProfile(ctx context.Context, ID account.ProfileID) (*account.Pr
 	return &p, err
 }
 
-func (a *App) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profile, error) {
-	query := a.firestore.Collection("profiles").Where("UID", "==", string(UID)).OrderBy("Name", firestore.Asc).Limit(100)
-	// ref := a.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
+func (db *Datastore) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profile, error) {
+	query := db.firestore.Collection("profiles").Where("UID", "==", string(UID)).OrderBy("Name", firestore.Asc).Limit(100)
+	// ref := db.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 	var out []account.Profile
@@ -57,11 +65,11 @@ func (a *App) GetProfiles(ctx context.Context, UID account.UID) ([]account.Profi
 }
 
 // GetStaleBills gets bills in an active session that have not been checked recently
-func (a *App) GetStaleBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
+func (db *Datastore) GetStaleBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
 	target := time.Hour * 6
 	now := time.Now().UTC()
 	cutoff := now.Add(-1 * target)
-	iter := a.firestore.CollectionGroup("bills").Where(
+	iter := db.firestore.CollectionGroup("bills").Where(
 		"LastChecked", "<", cutoff).Where(
 		"Session.EndYear", ">=", now.Year()).Limit(limit).Documents(ctx)
 	defer iter.Stop()
@@ -84,11 +92,11 @@ func (a *App) GetStaleBills(ctx context.Context, limit int) ([]legislature.Legis
 	return out, nil
 }
 
-func (a *App) GetRecentBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
+func (db *Datastore) GetRecentBills(ctx context.Context, limit int) ([]legislature.Legislation, error) {
 	if limit == 0 || limit > 1000 {
 		limit = 20
 	}
-	iter := a.firestore.CollectionGroup("bills").OrderBy("Added", firestore.Desc).Limit(limit).Documents(ctx)
+	iter := db.firestore.CollectionGroup("bills").OrderBy("Added", firestore.Desc).Limit(limit).Documents(ctx)
 	defer iter.Stop()
 	var out []legislature.Legislation
 	for {
@@ -109,9 +117,9 @@ func (a *App) GetRecentBills(ctx context.Context, limit int) ([]legislature.Legi
 	return out, nil
 }
 
-// func (a *App) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
-// 	query := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
-// 	// ref := a.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
+// func (db *Datastore) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
+// 	query := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
+// 	// ref := db.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
 // 	iter := query.Documents(ctx)
 // 	defer iter.Stop()
 // 	var out []account.Bookmark
@@ -133,43 +141,43 @@ func (a *App) GetRecentBills(ctx context.Context, limit int) ([]legislature.Legi
 // 	return out, nil
 // }
 
-func (a *App) CreateProfile(ctx context.Context, p account.Profile) error {
+func (db *Datastore) CreateProfile(ctx context.Context, p account.Profile) error {
 	p.LastModified = time.Now().UTC()
 	log.Printf("creating profile %#v", p)
-	_, err := a.firestore.Collection("profiles").Doc(string(p.ID)).Create(ctx, p)
+	_, err := db.firestore.Collection("profiles").Doc(string(p.ID)).Create(ctx, p)
 	return err
 }
 
-func (a *App) UpdateProfile(ctx context.Context, p account.Profile) error {
+func (db *Datastore) UpdateProfile(ctx context.Context, p account.Profile) error {
 	p.LastModified = time.Now().UTC()
 	log.Printf("updated profile %#v", p)
-	_, err := a.firestore.Collection("profiles").Doc(string(p.ID)).Set(ctx, p)
+	_, err := db.firestore.Collection("profiles").Doc(string(p.ID)).Set(ctx, p)
 	return err
 }
 
-func (a *App) SaveBookmark(ctx context.Context, p account.ProfileID, b account.Bookmark) error {
+func (db *Datastore) SaveBookmark(ctx context.Context, p account.ProfileID, b account.Bookmark) error {
 	b.LastModified = time.Now().UTC()
-	_, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(b.Key()).Create(ctx, b)
+	_, err := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(b.Key()).Create(ctx, b)
 	return err
 }
 
-func (a *App) UpdateBookmark(ctx context.Context, p account.ProfileID, b account.Bookmark) error {
+func (db *Datastore) UpdateBookmark(ctx context.Context, p account.ProfileID, b account.Bookmark) error {
 	b.LastModified = time.Now().UTC()
-	_, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(b.Key()).Set(ctx, b)
+	_, err := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(b.Key()).Set(ctx, b)
 	return err
 }
 
-func (a *App) DeleteBookmark(ctx context.Context, p account.ProfileID, b legislature.BodyID, l legislature.LegislationID) error {
+func (db *Datastore) DeleteBookmark(ctx context.Context, p account.ProfileID, b legislature.BodyID, l legislature.LegislationID) error {
 	k := account.BookmarkKey(b, l)
-	_, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(k).Delete(ctx)
+	_, err := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(k).Delete(ctx)
 	return err
 }
 
-func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) (*account.Bookmark, error) {
+func (db *Datastore) GetBookmark(ctx context.Context, p account.ProfileID, key string) (*account.Bookmark, error) {
 	if !account.IsValidProfileID(p) {
 		return nil, nil
 	}
-	dsnap, err := a.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(key).Get(ctx)
+	dsnap, err := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Doc(key).Get(ctx)
 	if err != nil {
 		if IsNotFound(err) {
 			return nil, nil
@@ -184,7 +192,7 @@ func (a *App) GetBookmark(ctx context.Context, p account.ProfileID, key string) 
 	return &b, err
 }
 
-func (app *App) UpdateBill(ctx context.Context, a, b legislature.Legislation) error {
+func (app *Datastore) UpdateBill(ctx context.Context, a, b legislature.Legislation) error {
 
 	changes := legislature.CalculateSponsorChanges(a, b)
 	if len(changes) > 0 {
@@ -213,13 +221,13 @@ func (app *App) UpdateBill(ctx context.Context, a, b legislature.Legislation) er
 	return err
 }
 
-func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
+func (db *Datastore) SaveBill(ctx context.Context, b legislature.Legislation) error {
 	b.Added = time.Now().UTC()
 	b.LastChecked = time.Now().UTC()
-	_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
+	_, err := db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Create(ctx, b)
 	if IsAlreadyExists(err) {
 		var bb *legislature.Legislation
-		bb, err = a.GetBill(ctx, b.Body, b.ID)
+		bb, err = db.GetBill(ctx, b.Body, b.ID)
 		if err != nil {
 			return err
 		}
@@ -241,11 +249,11 @@ func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
 			for i := range changes {
 				changesArray[i] = changes[i]
 			}
-			_, err := a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
+			_, err := db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Update(ctx, []firestore.Update{
 				{Path: "Sponsors", Value: firestore.ArrayUnion(changesArray...)},
 			})
 			if err != nil && IsNotFound(err) {
-				_, err = a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Set(ctx, legislature.Changes{
+				_, err = db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("changes").Doc(string(b.ID)).Set(ctx, legislature.Changes{
 					Sponsors: changes,
 				})
 				if err != nil {
@@ -257,15 +265,15 @@ func (a *App) SaveBill(ctx context.Context, b legislature.Legislation) error {
 		}
 
 		// TODO: more
-		_, err = a.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, *bb)
+		_, err = db.firestore.Collection("bodies").Doc(string(b.Body)).Collection("bills").Doc(string(b.ID)).Set(ctx, *bb)
 
 	}
 	// TODO: handle duplicates
 	return err
 }
 
-func (a *App) GetBill(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (*legislature.Legislation, error) {
-	dsnap, err := a.firestore.Collection("bodies").Doc(string(body)).Collection("bills").Doc(string(id)).Get(ctx)
+func (db *Datastore) GetBill(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (*legislature.Legislation, error) {
+	dsnap, err := db.firestore.Collection("bodies").Doc(string(body)).Collection("bills").Doc(string(id)).Get(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -274,9 +282,9 @@ func (a *App) GetBill(ctx context.Context, body legislature.BodyID, id legislatu
 	return &l, err
 }
 
-func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.ProfileID) (account.Bookmarks, error) {
+func (db *Datastore) GetProfileBookmarks(ctx context.Context, profileID account.ProfileID) (account.Bookmarks, error) {
 	var out account.Bookmarks
-	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
+	query := db.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 	bills := []*firestore.DocumentRef{}
@@ -296,10 +304,10 @@ func (a *App) GetProfileBookmarks(ctx context.Context, profileID account.Profile
 		body := resolvers.Bodies[b.BodyID]
 		b.Body = &body
 		out = append(out, b)
-		bills = append(bills, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
+		bills = append(bills, db.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
 	}
 
-	docs, err := a.firestore.GetAll(ctx, bills)
+	docs, err := db.firestore.GetAll(ctx, bills)
 	if err != nil {
 		return nil, err
 	}
@@ -328,10 +336,10 @@ type BookmarkChanges struct {
 }
 
 // GetProfileChanges returns all bills regardless of if any chagnes were detected
-func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID) ([]BookmarkChanges, error) {
+func (db *Datastore) GetProfileChanges(ctx context.Context, profileID account.ProfileID) ([]BookmarkChanges, error) {
 	var out []BookmarkChanges
 	var working []*BookmarkChanges
-	query := a.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
+	query := db.firestore.Collection(fmt.Sprintf("profiles/%s/bookmarks", profileID)).Limit(5000)
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 	var refs []*firestore.DocumentRef
@@ -357,13 +365,13 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 		}
 		bc := &BookmarkChanges{Bookmark: b}
 		working = append(working, bc)
-		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
+		refs = append(refs, db.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("bills").Doc(string(b.LegislationID)))
 		target = append(target, &bc.Legislation)
-		refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("changes").Doc(string(b.LegislationID)))
+		refs = append(refs, db.firestore.Collection("bodies").Doc(string(b.BodyID)).Collection("changes").Doc(string(b.LegislationID)))
 		target = append(target, &bc.Changes)
 	}
 
-	docs, err := a.firestore.GetAll(ctx, refs)
+	docs, err := db.firestore.GetAll(ctx, refs)
 	if err != nil {
 		return out, err
 	}
@@ -379,13 +387,13 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 
 	for _, b := range working {
 		if b.Legislation.SameAs != "" {
-			refs = append(refs, a.firestore.Collection("bodies").Doc(string(b.Body.Bicameral)).Collection("changes").Doc(string(b.Legislation.SameAs)))
+			refs = append(refs, db.firestore.Collection("bodies").Doc(string(b.Body.Bicameral)).Collection("changes").Doc(string(b.Legislation.SameAs)))
 			target = append(target, &b.SameAsChanges)
 		}
 	}
 
 	if len(refs) > 0 {
-		docs, err := a.firestore.GetAll(ctx, refs)
+		docs, err := db.firestore.GetAll(ctx, refs)
 		if err != nil {
 			return out, err
 		}
@@ -405,9 +413,9 @@ func (a *App) GetProfileChanges(ctx context.Context, profileID account.ProfileID
 
 }
 
-func (a *App) GetChanges(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (legislature.Changes, error) {
+func (db *Datastore) GetChanges(ctx context.Context, body legislature.BodyID, id legislature.LegislationID) (legislature.Changes, error) {
 	var r legislature.Changes
-	dsnap, err := a.firestore.Collection("bodies").Doc(string(body)).Collection("changes").Doc(string(id)).Get(ctx)
+	dsnap, err := db.firestore.Collection("bodies").Doc(string(body)).Collection("changes").Doc(string(id)).Get(ctx)
 	if err != nil && IsNotFound(err) {
 		return r, nil
 	} else if err != nil {
