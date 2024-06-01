@@ -270,6 +270,7 @@ func (db *Datastore) SaveBill(ctx context.Context, b legislature.Legislation) (s
 		_, err = db.firestore.Collection("bodies").Doc(string(sameAsBody)).Collection("bills").Doc(string(b.SameAs)).Get(ctx)
 		if IsNotFound(err) {
 			staleSameAs = true
+			err = nil
 		}
 	}
 	return

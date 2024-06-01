@@ -381,6 +381,7 @@ func (a *App) ProfilePostURL(ctx context.Context, profileID account.ProfileID, r
 					// update
 					return a.UpdateBookmark(ctx, profileID, *o.Bookmark)
 				}
+				// TODO: check for a bookmark of the "same-as" bill
 
 				o.Bookmark = &account.Bookmark{
 					UID:           uid,
