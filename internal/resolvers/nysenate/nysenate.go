@@ -83,8 +83,8 @@ func LegislationSort(a, b *legislature.Legislation) bool {
 	}
 }
 
-var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)(/|/amendment.*)?$")
-var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)(/|/amendment.*)?$")
+var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)([A-F]|/|/amendment.*)?$")
+var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)([A-F]|/|/amendment.*)?$")
 
 func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
@@ -94,7 +94,7 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 	}
 	p := nysenatePattern.FindStringSubmatch(u.Path)
 	if len(p) != 6 {
-		log.Debugf("NYSenate no match %#v %s", p, u.String())
+		log.Errorf("NYSenate no match %#v %s", p, u.String())
 		return nil, nil
 	}
 	log.Infof("found nysenate URL %s", u.String())
