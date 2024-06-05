@@ -142,29 +142,71 @@ func (db *Datastore) GetAllBills(ctx context.Context, callback func(l legislatur
 	return nil
 }
 
-// func (db *Datastore) GetBookmarks(ctx context.Context, p account.ProfileID) ([]account.Bookmark, error) {
-// 	query := db.firestore.Collection("profiles").Doc(string(p)).Collection("bookmarks").Limit(1000) //.OrderBy("Name", firestore.Asc).Limit(100)
-// 	// ref := db.firestore.Collection(fmt.Sprintf("users/%s/profiles", UID))
-// 	iter := query.Documents(ctx)
-// 	defer iter.Stop()
-// 	var out []account.Bookmark
-// 	for {
-// 		doc, err := iter.Next()
-// 		if err == iterator.Done {
-// 			break
-// 		}
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		var p account.Bookmark
-// 		err = doc.DataTo(&p)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		out = append(out, p)
-// 	}
-// 	return out, nil
-// }
+func (db *Datastore) RenameProfile(ctx context.Context, old, newID account.ProfileID, user account.UID) error {
+	log.Infof("rename %q => %q", old, newID)
+	p, err := db.GetProfile(ctx, old)
+	if err != nil {
+		return err
+	}
+	if p == nil {
+		return fmt.Errorf("profile %s not found", old)
+	}
+
+	p.ID = newID
+	_, err = db.firestore.Collection("profiles").Doc(string(newID)).Create(ctx, *p)
+	if err != nil {
+		return err
+	}
+
+	// CreateRedirect
+	err = db.CreateRedirect(ctx, old, newID, user)
+	if err != nil {
+		return err
+	}
+
+	// get all bookmarks
+	bookmarks, err := db.GetProfileBookmarks(ctx, old)
+	if err != nil {
+		return err
+	}
+	for _, b := range bookmarks {
+		_, err := db.firestore.Collection("profiles").Doc(string(newID)).Collection("bookmarks").Doc(b.Key()).Create(ctx, b)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = db.firestore.Collection("profiles").Doc(string(old)).Delete(ctx)
+	return err
+}
+
+// CreateRedirect creates a redirect from one profile URL to another
+func (db *Datastore) CreateRedirect(ctx context.Context, from, to account.ProfileID, UID account.UID) error {
+	now := time.Now().UTC()
+	_, err := db.firestore.Collection("redirects").Doc(string(from)).Set(ctx, account.ProfileRedirect{
+		From:    from,
+		To:      to,
+		UID:     UID,
+		Created: now,
+	})
+	return err
+}
+
+// GetRedirect returns the redirect for a profile
+func (db *Datastore) GetRedirect(ctx context.Context, from account.ProfileID) (*account.ProfileRedirect, error) {
+	dsnap, err := db.firestore.Collection("redirects").Doc(string(from)).Get(ctx)
+	if err != nil {
+		if IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if !dsnap.Exists() {
+		return nil, nil
+	}
+	var r account.ProfileRedirect
+	err = dsnap.DataTo(&r)
+	return &r, err
+}
 
 func (db *Datastore) CreateProfile(ctx context.Context, p account.Profile) error {
 	p.LastModified = time.Now().UTC()
@@ -175,7 +217,6 @@ func (db *Datastore) CreateProfile(ctx context.Context, p account.Profile) error
 
 func (db *Datastore) UpdateProfile(ctx context.Context, p account.Profile) error {
 	p.LastModified = time.Now().UTC()
-	log.Printf("updated profile %#v", p)
 	_, err := db.firestore.Collection("profiles").Doc(string(p.ID)).Set(ctx, p)
 	return err
 }

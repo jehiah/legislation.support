@@ -27,15 +27,30 @@ type Profile struct {
 	ScorecardOptions
 }
 
+type ProfileRedirect struct {
+	From ProfileID
+	To   ProfileID
+
+	UID     UID
+	Created time.Time
+}
+
 func (p Profile) HasAccess(u UID) bool {
 	return p.UID == u
 }
 
+func (p ProfileID) Link() string {
+	return "/" + url.PathEscape(string(p))
+}
+func (p ProfileID) FullLink() string {
+	return "https://legislation.support/" + url.PathEscape(string(p))
+}
+
 func (p Profile) Link() string {
-	return "/" + url.PathEscape(string(p.ID))
+	return p.ID.Link()
 }
 func (p Profile) FullLink() string {
-	return "https://legislation.support/" + url.PathEscape(string(p.ID))
+	return p.ID.FullLink()
 }
 
 type Bookmark struct {
@@ -126,7 +141,6 @@ func (b Bookmarks) FilterTag(tag string) Bookmarks {
 	}
 	return out
 }
-
 
 // Filter includes items that match any of the selected bodies
 func (b Bookmarks) Filter(body ...legislature.BodyID) Bookmarks {

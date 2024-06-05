@@ -303,6 +303,14 @@ body {
         <div id="descriptionHelp" class="form-text">Markdown OK</div>
       </div>
 
+      <div class="form-floating mt-2 mb-1">
+        <div class="input-group">
+          <span class="input-group-text" id="inputGroupPrepend">URL</span>
+          <input type="text" class="form-control " name="new_url" id="new_url" placeholder="{{.Profile.ID}}" autocomplete="off">
+        </div>
+        <div class="form-text preview">Available at <code>https://legislation.support/<span id="preview-new-url">{{.Profile.ID}}</span></code></div>
+      </div>
+
       <div class="form-check form-switch mt-2 mb-1">
         <input class="form-check-input" type="checkbox" role="switch" id="edit-private" name="private" value="on" {{if .Profile.Private}}checked{{end}}>
         <label class="form-check-label" for="edit-private"><i class="bi bi-lock-fill"></i> Private Mode</label>
@@ -383,6 +391,16 @@ body {
 
 {{ define "javascript" }}
 <script type="module">
+function slugify(text){
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start of text
+    .replace(/-+$/, '');            // Trim - from end of text
+}
+
+
   const a = {{.Bookmarks}}
   a.push(...{{.ArchivedBookmarks }})
   const bookmarks = new Map(a.map(d => [d.BodyID + d.LegislationID, d]))
@@ -569,6 +587,16 @@ if (messageError) {
     document.getElementById("message-error").remove()
   }, 1000 * 10)
 }
+
+function on_new_url_update() {
+  var urlEl = document.getElementById('new_url');
+  var p = urlEl.value;
+  if (p === "" )  { p = urlEl.placeholder }
+  var slug = slugify(p);
+  document.getElementById('preview-new-url').textContent = slug;
+}
+document.getElementById('new_url').addEventListener("change", on_new_url_update)
+document.getElementById('new_url').addEventListener("input", on_new_url_update)
 
 </script>
 

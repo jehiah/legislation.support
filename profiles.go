@@ -119,11 +119,28 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 		profile.Name = string(profile.ID)
 	}
 
-	err := a.CreateProfile(ctx, profile)
+	rd, err := a.GetRedirect(ctx, profile.ID)
 	if err != nil {
+		log.WithField("uid", uid).WithField("profileID", profile.ID).Errorf("%#v", err)
+		a.WebInternalError500(w, "")
+		return
+	}
+	if rd != nil {
+		http.Error(w, fmt.Sprintf("profile %q is already taken", profile.ID), 409)
+		// apiresponse.BadRequest400(w, "PROFILE_EXISTS")
+		return
+	}
+
+	err = a.CreateProfile(ctx, profile)
+	if err != nil {
+		if datastore.IsAlreadyExists(err) {
+			http.Error(w, fmt.Sprintf("profile %q is already taken", profile.ID), 409)
+			// apiresponse.Error(w, "PROFILE_EXISTS", 409)
+			return
+		}
 		// duplicate?
 		log.WithField("uid", uid).Warningf("%#v %s", err, err)
-		http.Error(w, fmt.Sprintf("profile %q is already taken", profile.ID), 409)
+		apiresponse.InternalError500(w)
 		return
 	}
 	http.Redirect(w, r, profile.Link(), 302)
@@ -138,6 +155,17 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := a.User(r)
+
+	redirect, err := a.GetRedirect(ctx, profileID)
+	if err != nil {
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		a.WebInternalError500(w, "")
+		return
+	}
+	if redirect != nil {
+		http.Redirect(w, r, redirect.To.Link(), http.StatusPermanentRedirect)
+		return
+	}
 
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
@@ -283,6 +311,16 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	case strings.TrimSpace(r.Form.Get("name")) != "":
 		err = a.ProfileEdit(ctx, *profile, r)
+		log.Printf("err %q new_url:%q", err, account.ProfileID(strings.TrimSpace(r.Form.Get("new_url"))))
+		if err == nil {
+			if s := account.ProfileID(strings.TrimSpace(r.Form.Get("new_url"))); s != "" && s != profileID {
+				if !account.IsValidProfileID(s) {
+					apiresponse.BadRequest400(w, "INVALID_NEW_URL")
+					return
+				}
+				err = a.RenameProfile(ctx, profileID, s, uid)
+			}
+		}
 	}
 
 	if err != nil {

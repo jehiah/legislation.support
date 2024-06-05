@@ -35,6 +35,10 @@ func OK200(w http.ResponseWriter, data any) {
 	writeJSONResponse(w, 200, data)
 }
 
+func BadRequest400(w http.ResponseWriter, message string) {
+	writeJSONResponse(w, 400, message)
+}
+
 func NotFound404(w http.ResponseWriter) {
 	writeJSONResponse(w, 404, StatusText(404))
 }

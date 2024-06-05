@@ -46,6 +46,17 @@ func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
 	}
 	uid := a.User(r)
 
+	redirect, err := a.GetRedirect(ctx, profileID)
+	if err != nil {
+		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
+		a.WebInternalError500(w, "")
+		return
+	}
+	if redirect != nil {
+		http.Redirect(w, r, redirect.To.Link()+"/changes", http.StatusPermanentRedirect)
+		return
+	}
+
 	profile, err := a.GetProfile(ctx, profileID)
 	if err != nil {
 		log.WithField("uid", uid).WithField("profileID", profileID).Errorf("%#v", err)
