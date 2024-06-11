@@ -41,14 +41,18 @@
 
 <div class="row mb-3 mt-3">
 
-<p class="text-center">Create a profile to keep track of legislation you support.</p>
+<p class="text-center pre-loading">Create a profile to keep track of legislation you support.</p>
 
 </div>
 
 <div class="row">
 
   <div id="auth-container"></div>
-  <div id="loader">Loading...</div>
+  <div id="loader">
+    <div class="spinner-border text-dark" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+  </div>
 
 </div>
 
@@ -101,6 +105,8 @@ ui.start('#auth-container', {
       // User successfully signed in.
       // Return type determines whether we continue the redirect automatically
       // or whether we leave that to developer to handle.
+      // document.getElementsByClassName('pre-loading')
+      document.getElementById('loader').style.display = 'block';
 
       authResult.user.getIdToken().then(idToken => {
         // Session login endpoint is queried and the session cookie is set.
