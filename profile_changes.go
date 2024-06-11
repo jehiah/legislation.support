@@ -125,8 +125,10 @@ func (a *App) ProfileChanges(w http.ResponseWriter, r *http.Request) {
 		return body.Changes[i].SponsorChange.Date.After(body.Changes[j].SponsorChange.Date)
 	})
 
-	// sort.Sort(account.SortedBookmarks(body.Bookmarks))
-	// log.Printf("bookmarks %#v", body.Bookmarks)
+	// only show the last ~100 changes? 200?
+	if len(body.Changes) > 150 {
+		body.Changes = body.Changes[:150]
+	}
 
 	if strings.HasSuffix(r.URL.Path, "/changes.json") {
 		a.ProfileChangesJSON(w, r, *profile, body.Changes)
