@@ -198,7 +198,8 @@ type Member struct {
 	ShortName string `firestore:",omitempty"`
 	URL       string `firestore:",omitempty"`
 	District  string `firestore:",omitempty"`
-	// TODO: party?
+	// TODO: party? parties?
+	// Todo body?
 }
 
 func (m Member) ID() string {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
 	log "github.com/sirupsen/logrus"
@@ -415,7 +416,7 @@ func (a NYSenateAPI) GetMembers(ctx context.Context, session legislature.Session
 	}
 	var out []legislature.Member
 	for _, m := range data.Result.Items {
-		out = append(out, m.Member())
+		out = append(out, m.Member(c))
 		for memberSession, mm := range m.Sessions {
 			for _, mmm := range mm {
 				// could have a different short name for this session
@@ -426,6 +427,7 @@ func (a NYSenateAPI) GetMembers(ctx context.Context, session legislature.Session
 						// Slug:        fmt.Sprintf("%d", m.MemberID),
 						FullName:  m.FullName,
 						ShortName: mmm.ShortName,
+						URL:       memberURL(m.FullName, c),
 						District:  fmt.Sprintf("%d", mmm.DistrictCode),
 					})
 				}
@@ -433,6 +435,18 @@ func (a NYSenateAPI) GetMembers(ctx context.Context, session legislature.Session
 		}
 	}
 	return out, nil
+}
+
+func memberURL(s string, c chamber) string {
+	switch c {
+	case senateChamber:
+		base := "https://www.nysenate.gov/senators/"
+		return base + strings.ToLower(strings.Join(strings.Fields(s), "-"))
+	case assemblyChamber:
+		base := "https://nyassembly.gov/mem/"
+		return base + strings.Join(strings.Fields(s), "-")
+	}
+	return s
 }
 
 // https://legislation.nysenate.gov/static/docs/html/members.html
@@ -491,10 +505,10 @@ type Person struct {
 	ImgName    string      `json:"imgName"`
 }
 
-func (m MemberSession) Member() legislature.Member {
+func (m MemberSession) Member(c chamber) legislature.Member {
 	return legislature.Member{
 		NumericID: m.MemberID,
-		// Slug:        fmt.Sprintf("%d", m.MemberID),
+		URL:       memberURL(m.FullName, c),
 		FullName:  m.FullName,
 		ShortName: m.ShortName,
 		District:  fmt.Sprintf("%d", m.DistrictCode),

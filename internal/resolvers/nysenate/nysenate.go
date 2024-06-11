@@ -172,12 +172,17 @@ func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation 
 		log.Errorf("unable to find session %v", bill.Session)
 		return nil
 	}
+	chamber := assemblyChamber
+	if body != "ny-assembly" {
+		chamber = senateChamber
+	}
 	var sponsors []legislature.Member
 	for _, m := range bill.GetSponsors() {
 		sponsors = append(sponsors, legislature.Member{
 			NumericID: m.MemberID,
 			FullName:  m.FullName,
 			ShortName: m.ShortName,
+			URL:       memberURL(m.FullName, chamber),
 			// District:  fmt.Sprintf("%d", mmm.DistrictCode),
 			// URL: fmt.Sprintf("https://www.nysenate.gov/senators/%d", m.MemberID)
 		})

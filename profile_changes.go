@@ -196,7 +196,6 @@ func (a *App) ProfileChangesJSON(w http.ResponseWriter, r *http.Request, profile
 	}
 
 	for _, c := range changes {
-
 		feed.Items = append(feed.Items, &feeds.JSONItem{
 			Title: fmt.Sprintf("%s Sponsored by %s", c.Legislation.DisplayID, c.SponsorChange.Member.FullName),
 			// Link:  &feeds.Link{Href: u.String()},
