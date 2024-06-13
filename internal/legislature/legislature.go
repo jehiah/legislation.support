@@ -217,24 +217,26 @@ type SponsorChange struct {
 
 // CalculateSponsorChanges returns a list of changes in .Sponsors from a to b
 func CalculateSponsorChanges(a, b Legislation) []SponsorChange {
-	have := make(map[Member]bool, len(a.Sponsors))
+	have := make(map[string]bool, len(a.Sponsors))
+	members := make(map[string]Member, len(a.Sponsors))
 	var changes []SponsorChange
 	for _, m := range a.Sponsors {
-		have[m] = true
+		have[m.ID()] = true
+		members[m.ID()] = m
 	}
 	date := b.LastModified
 	if date.IsZero() {
 		date = time.Now().UTC()
 	}
 	for _, m := range b.Sponsors {
-		if !have[m] {
+		if !have[m.ID()] {
 			changes = append(changes, SponsorChange{Date: date, Member: m})
 		}
-		have[m] = false
+		have[m.ID()] = false
 	}
-	for m, v := range have {
+	for memberID, v := range have {
 		if v {
-			changes = append(changes, SponsorChange{Date: date, Member: m, Withdraw: true})
+			changes = append(changes, SponsorChange{Date: date, Member: members[memberID], Withdraw: true})
 		}
 	}
 	return changes
