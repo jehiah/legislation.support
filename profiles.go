@@ -311,14 +311,15 @@ func (a *App) ProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	case strings.TrimSpace(r.Form.Get("name")) != "":
 		err = a.ProfileEdit(ctx, *profile, r)
-		log.Printf("err %q new_url:%q", err, account.ProfileID(strings.TrimSpace(r.Form.Get("new_url"))))
+		newUrl := account.ProfileID(strings.TrimSpace(r.Form.Get("new_url")))
 		if err == nil {
-			if s := account.ProfileID(strings.TrimSpace(r.Form.Get("new_url"))); s != "" && s != profileID {
-				if !account.IsValidProfileID(s) {
+			if newUrl != "" && newUrl != profileID {
+				log.Infof("rename profile %q to %q", profileID, newUrl)
+				if !account.IsValidProfileID(newUrl) {
 					apiresponse.BadRequest400(w, "INVALID_NEW_URL")
 					return
 				}
-				err = a.RenameProfile(ctx, profileID, s, uid)
+				err = a.RenameProfile(ctx, profileID, newUrl, uid)
 			}
 		}
 	}
