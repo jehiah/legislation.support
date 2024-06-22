@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"sync/atomic"
+	"time"
 
 	"github.com/jehiah/legislation.support/internal/concurrentlimit"
 	"github.com/jehiah/legislation.support/internal/resolvers"
@@ -22,7 +26,8 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.ParseForm()
-	ctx := r.Context()
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*45)
+	defer cancel()
 	limit := 500
 	if r.Form.Get("limit") != "" {
 		limit, _ = strconv.Atoi(r.Form.Get("limit"))
@@ -40,6 +45,7 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 
 	limiter := concurrentlimit.NewConcurrentLimit(5)
 
+	var skipped int64
 	// if any bills are stale, refresh (some) of them - error should not be fatal
 	var wg errgroup.Group
 	for i := range bills {
@@ -48,6 +54,12 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 
 		wg.Go(func() error {
 			return limiter.Run(func() error {
+				select {
+				case <-ctx.Done():
+					atomic.AddInt64(&skipped, 1)
+					return nil
+				default:
+				}
 				udpatedLeg, err := resolvers.Resolvers.Find(l.Body).Refresh(ctx, l.ID)
 				if err != nil {
 					return err
@@ -82,6 +94,11 @@ func (a *App) InternalRefresh(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	output := "done"
+	if skipped > 0 {
+		log.Printf("refresh skipped %d due to timeout", skipped)
+		output = fmt.Sprintf("done (skipped %d due to timeout)", skipped)
+	}
 
-	w.Write([]byte("done"))
+	w.Write([]byte(output))
 }
