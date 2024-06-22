@@ -53,6 +53,10 @@ func Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	return Resolvers.Lookup(ctx, u)
 }
 
+func SupportedDomains() []string {
+	return Resolvers.SupportedDomains()
+}
+
 var Bodies map[legislature.BodyID]legislature.Body = map[legislature.BodyID]legislature.Body{
 	NYCCouncil.ID: NYCCouncil,
 	NYSenate.ID:   NYSenate,

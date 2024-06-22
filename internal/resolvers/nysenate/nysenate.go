@@ -86,6 +86,10 @@ func LegislationSort(a, b *legislature.Legislation) bool {
 var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((S|s)[0-9]+)([A-F]|/|/amendment.*)?$")
 var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)([A-F]|/|/amendment.*)?$")
 
+func (a NYSenate) SupportedDomains() []string {
+	return []string{"nysenate.gov"}
+}
+
 func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
 	case "www.nysenate.gov":
@@ -104,6 +108,10 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 		return nil, err
 	}
 	return bill.Legislation(a.body.ID), nil
+}
+
+func (a NYAssembly) SupportedDomains() []string {
+	return []string{"assembly.state.ny.us"}
 }
 
 func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {

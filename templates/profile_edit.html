@@ -102,8 +102,9 @@ body {
       <input type="url" class="form-control" name="legislation_url" id="legislation-url" aria-describedby="legislation-urlHelp" placeholder="https://city-council.gov/bill/A-1234" pattern="https?://.*">
     </div>
     <div class="invalid-feedback">
-      Supported URL's: intro.nyc, legistar.council.nyc.gov, www.nysenate.gov
+      Supported URL's: {{ Join .SupportedDomains ", " }}
     </div>
+    <div class="form-text" id="legislation-urlHelp">Supported URL's: {{ Join .SupportedDomains ", " }}</div>
   </div>
 
 <div class="form-floating mb-2" id="notes-row" style="display:none;">
@@ -400,18 +401,31 @@ function slugify(text){
     .replace(/-+$/, '');            // Trim - from end of text
 }
 
-
+function isValidUrl( urlString ) {
+      try { 
+      	return Boolean(new URL(urlString)); 
+      }
+      catch(e){ 
+      	return false; 
+      }
+  }
   const a = {{.Bookmarks}}
   a.push(...{{.ArchivedBookmarks }})
   const bookmarks = new Map(a.map(d => [d.BodyID + d.LegislationID, d]))
-
-  document.getElementById('legislation-url').addEventListener("change", _ => {
-    document.getElementById('tag-row').style.display=''
-    document.getElementById('notes-row').style.display=''
+  const legislationUrlEl = document.getElementById('legislation-url');
+  legislationUrlEl.addEventListener("change", _ => {
+    if (isValidUrl(legislationUrlEl.value)) {
+      document.getElementById('tag-row').style.display=''
+      document.getElementById('notes-row').style.display=''
+      document.getElementById('legislation-urlHelp').style.display='none'
+    }
   })
-  document.getElementById('legislation-url').addEventListener("input", _ => {
-    document.getElementById('tag-row').style.display=''
-    document.getElementById('notes-row').style.display=''
+  legislationUrlEl.addEventListener("input", _ => {
+    if (isValidUrl(legislationUrlEl.value)) {
+      document.getElementById('tag-row').style.display=''
+      document.getElementById('notes-row').style.display=''
+      document.getElementById('legislation-urlHelp').style.display='none'
+    }
   })
 
 // Loop over them and prevent submission

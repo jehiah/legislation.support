@@ -40,6 +40,10 @@ func (n NYC) Body() legislature.Body { return n.body }
 
 var introPattern = regexp.MustCompile("/[0-9]{1,4}-20[12][0-9]$")
 
+func (n NYC) SupportedDomains() []string {
+	return []string{"legistar.council.nyc.gov", "intro.nyc"}
+}
+
 func (n NYC) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
 	switch u.Hostname() {
 	case "legistar.council.nyc.gov", "nyc.legistar.com":

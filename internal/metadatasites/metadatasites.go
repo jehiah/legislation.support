@@ -15,3 +15,6 @@ var Sites = legislature.MetadataSites{
 func Lookup(ctx context.Context, u *url.URL) (*url.URL, error) {
 	return Sites.Lookup(ctx, u)
 }
+func SupportedDomains() []string {
+	return Sites.SupportedDomains()
+}

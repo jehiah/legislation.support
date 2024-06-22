@@ -17,6 +17,10 @@ type BillTrack50 struct{}
 
 var billDetailPattern = regexp.MustCompile("/billdetail/([0-9]+)$")
 
+func (b BillTrack50) SupportedDomains() []string {
+	return []string{"billtrack50.com"}
+}
+
 // LookupBill matches www.billtrack50.com
 //
 // Example: https://www.billtrack50.com/billdetail/12345

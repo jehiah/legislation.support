@@ -201,6 +201,7 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 		SelectedTag       string
 		Bookmarks         account.Bookmarks
 		ArchivedBookmarks account.Bookmarks
+		SupportedDomains  []string
 	}
 	body := Page{
 		Message:           message,
@@ -211,7 +212,10 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 		SelectedTag:       r.Form.Get("tag"),
 		Bookmarks:         make(account.Bookmarks, 0),
 		ArchivedBookmarks: make(account.Bookmarks, 0),
+		SupportedDomains:  resolvers.SupportedDomains(),
 	}
+	body.SupportedDomains = append(body.SupportedDomains, metadatasites.SupportedDomains()...)
+	sort.Strings(body.SupportedDomains)
 
 	if body.EditMode {
 		templateName = "profile_edit.html"

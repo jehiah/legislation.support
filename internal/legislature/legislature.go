@@ -91,6 +91,7 @@ type Resolver interface {
 
 	Link(l LegislationID) *url.URL
 	DisplayID(l LegislationID) string
+	SupportedDomains() []string
 }
 type Resolvers []Resolver
 
@@ -101,6 +102,14 @@ func (r Resolvers) Find(ID BodyID) Resolver {
 		}
 	}
 	return nil
+}
+
+func (r Resolvers) SupportedDomains() []string {
+	var domains []string
+	for _, rr := range r {
+		domains = append(domains, rr.SupportedDomains()...)
+	}
+	return domains
 }
 
 func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error) {
@@ -124,6 +133,7 @@ func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error)
 // i.e. https://www.billtrack50.com
 type MetadataSite interface {
 	Lookup(ctx context.Context, u *url.URL) (*url.URL, error)
+	SupportedDomains() []string
 }
 type MetadataSites []MetadataSite
 
@@ -142,6 +152,14 @@ func (m MetadataSites) Lookup(ctx context.Context, u *url.URL) (*url.URL, error)
 		}
 	}
 	return u, e
+}
+
+func (m MetadataSites) SupportedDomains() []string {
+	var domains []string
+	for _, mm := range m {
+		domains = append(domains, mm.SupportedDomains()...)
+	}
+	return domains
 }
 
 func GenericLegislationSort(a, b *Legislation) bool {
