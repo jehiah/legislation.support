@@ -127,7 +127,7 @@ footer a:link, footer a:visited {
     </span>
     {{if .UID}}
     <span class="sign-out me-2 text-end"><a href="/">Profiles</a><br><a href="/sign_out">Sign Out</a></span>
-    {{else}}
+    {{else if ne .Title "Sign In"}}
     <span class="sign-in me-2"><a href="/sign_in">Sign In</a></span>
     {{end}}
   </div>

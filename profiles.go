@@ -42,7 +42,7 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request) {
 		Profiles []ProfileMetadata
 	}
 	body := Page{
-		Title: "legislation.support",
+		Title: "Legislation Profiles",
 		UID:   uid,
 	}
 

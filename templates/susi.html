@@ -41,14 +41,14 @@
 
 <div class="row mb-3 mt-3">
 
-<p class="text-center pre-loading">Create a profile to keep track of legislation you support.</p>
+<p class="text-center pre-loading">Create a legislation profile to track bills you support, view sponsor changes and legislation scorecards.</p>
 
 </div>
 
 <div class="row">
 
   <div id="auth-container"></div>
-  <div id="loader">
+  <div id="loader" class="text-center">
     <div class="spinner-border text-dark" role="status"></div>
     Loading...
   </div>
@@ -57,7 +57,7 @@
 
 
 {{if .Bills}}
-<h2 class="mt-5">Recent Legislation</h2>
+<h2 class="mt-5">Recent legislation added to profiles:</h2>
 {{end}}
 
 {{range .Bills}}

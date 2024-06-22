@@ -46,6 +46,11 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 	var bills []legislature.Legislation
 	var err error
 
+	body := Page{
+		Title:      "What Legislation Do You Support?",
+		AuthDomain: "legislation.support",
+	}
+
 	if r.URL.Path == "/" {
 		bills, err = a.GetRecentBills(ctx, 10)
 		if err != nil {
@@ -53,12 +58,10 @@ func (a *App) SUSI(w http.ResponseWriter, r *http.Request) {
 			a.WebInternalError500(w, "")
 			return
 		}
+	} else {
+		body.Title = "Sign In"
 	}
 
-	body := Page{
-		Title:      "legislation.support",
-		AuthDomain: "legislation.support",
-	}
 	if a.devMode {
 		body.AuthDomain = "dev.legislation.support"
 	}
