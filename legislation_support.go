@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"embed"
 	"flag"
 	"fmt"
@@ -162,6 +163,13 @@ func main() {
 		log.SetFormatter(&log.TextFormatter{TimestampFormat: tsFmt, FullTimestamp: true})
 	} else {
 		log.SetFormatter(&fluentdFormatter{})
+	}
+
+	// nyassembly.gov SSL has invalid chain
+	// https://www.ssllabs.com/ssltest/analyze.html?d=nyassembly.gov
+	t := http.DefaultTransport.(*http.Transport)
+	t.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
 	}
 
 	log.Print("starting server...")
