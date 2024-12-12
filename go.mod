@@ -1,18 +1,19 @@
 module github.com/jehiah/legislation.support
 
-go 1.22
+go 1.23
 
 require (
 	cloud.google.com/go/firestore v1.15.0
 	firebase.google.com/go/v4 v4.14.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gomarkdown/markdown v0.0.0-20240328165702-4d01890c35c0
+	github.com/gorilla/feeds v1.1.2
 	github.com/gorilla/handlers v1.5.2
 	github.com/jehiah/legislator v0.0.0-20240301144149-f4ba850725db
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/net v0.24.0
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.10.0
 	google.golang.org/api v0.172.0
 	google.golang.org/grpc v1.63.2
 )
@@ -37,7 +38,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.3 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/gorilla/feeds v1.1.2 // indirect
 	github.com/gosimple/slug v1.14.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -46,10 +46,10 @@ require (
 	go.opentelemetry.io/otel v1.25.0 // indirect
 	go.opentelemetry.io/otel/metric v1.25.0 // indirect
 	go.opentelemetry.io/otel/trace v1.25.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/oauth2 v0.19.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/appengine/v2 v2.0.6 // indirect
 	google.golang.org/genproto v0.0.0-20240412170617-26222e5d3d56 // indirect
