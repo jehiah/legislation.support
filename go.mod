@@ -12,6 +12,7 @@ require (
 	github.com/jehiah/legislator v0.0.0-20240301144149-f4ba850725db
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	golang.org/x/net v0.33.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/api v0.214.0

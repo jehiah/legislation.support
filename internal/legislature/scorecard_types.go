@@ -42,6 +42,11 @@ type Score struct {
 	Desired bool
 }
 
+type PersonWhipCount struct {
+	ScorecardPerson
+	WhipCount
+}
+
 func (s Score) Score() int {
 	if s.Desired {
 		switch strings.ToLower(s.Status) {

@@ -13,9 +13,14 @@ import (
 
 // Scorecard builds a scorecard for the tracked bills
 func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
-	t := newTemplate(a.templateFS, "scorecard.html")
 	ctx := r.Context()
 	r.ParseForm()
+
+	templateName := "scorecard.html"
+	if r.Form.Get("view") == "people" {
+		templateName = "scorecard_people.html"
+	}
+	t := newTemplate(a.templateFS, templateName)
 
 	profileID := account.ProfileID(r.PathValue("profile"))
 	if !account.IsValidProfileID(profileID) {
@@ -54,6 +59,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 		Profile  account.Profile
 		EditMode bool
 		*legislature.Scorecard
+		PersonWhipCounts []legislature.PersonWhipCount
 		// Bookmarks []account.Bookmark
 	}
 	b, err := a.GetProfileBookmarks(ctx, profileID)
@@ -106,9 +112,20 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for i, p := range pageBody.People {
+		pageBody.PersonWhipCounts = append(pageBody.PersonWhipCounts, legislature.PersonWhipCount{
+			ScorecardPerson: p,
+			WhipCount:       pageBody.Scorecard.WhipCount(i),
+		})
+	}
+
+	sort.Slice(pageBody.PersonWhipCounts, func(i, j int) bool {
+		return pageBody.PersonWhipCounts[i].WhipCount.Percent() > pageBody.PersonWhipCounts[j].WhipCount.Percent()
+	})
+
 	// log.Printf("bookmarks %#v", body.Bookmarks)
 
-	err = t.ExecuteTemplate(w, "scorecard.html", pageBody)
+	err = t.ExecuteTemplate(w, templateName, pageBody)
 	if err != nil {
 		log.WithFields(fields).Error(err)
 		a.WebInternalError500(w, "")

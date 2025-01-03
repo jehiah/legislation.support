@@ -86,6 +86,9 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"Join":     strings.Join,
 		"JoinTags": JoinTags,
 		"markdown": Markdown,
+		"add": func(a, b int) any {
+			return a + b
+		},
 		// "Resolver": resolvers.Resolvers.Find,
 		"LegislationLink":      LegislationLink,
 		"LegislationDisplayID": LegislationDisplayID,
