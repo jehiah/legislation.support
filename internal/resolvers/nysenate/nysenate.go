@@ -98,8 +98,11 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 		return nil, nil
 	}
 	p := nysenatePattern.FindStringSubmatch(u.Path)
+	if p == nil {
+		return nil, nil
+	}
 	if len(p) != 6 {
-		log.Errorf("NYSenate no match %#v %s", p, u.String())
+		log.Warnf("NYSenate no match %#v %s", p, u.String())
 		return nil, nil
 	}
 	log.Infof("found nysenate URL %s", u.String())

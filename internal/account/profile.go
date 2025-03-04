@@ -56,19 +56,19 @@ func (p Profile) FullLink() string {
 type Bookmark struct {
 	BodyID        legislature.BodyID
 	LegislationID legislature.LegislationID // Legislation Key
-	UID           UID                       // User ID
+	UID           UID                       `json:"-"` // User ID
 
 	Oppose bool
-	Rank   []bool // sortable
+	Rank   []bool `json:"-"` // sortable
 
 	Created      time.Time
 	LastModified time.Time
 
-	Tags  []string
-	Notes string
+	Tags  []string `json:",omitempty"`
+	Notes string   `json:",omitempty"`
 
 	Body          *legislature.Body        `firestore:"-"`
-	BicameralBody *legislature.Body        `firestore:"-"`
+	BicameralBody *legislature.Body        `firestore:"-" json:",omitempty"`
 	Legislation   *legislature.Legislation `firestore:"-"`
 }
 type Bookmarks []Bookmark

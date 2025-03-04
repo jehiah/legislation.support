@@ -149,6 +149,11 @@ func (a *App) IndexPost(w http.ResponseWriter, r *http.Request) {
 func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	profileID := account.ProfileID(r.PathValue("profile"))
+
+	if strings.HasSuffix(string(profileID), ".json") {
+		profileID = account.ProfileID(strings.TrimSuffix(string(profileID), ".json"))
+	}
+
 	if !account.IsValidProfileID(profileID) {
 		log.Printf("invalid profile %q", profileID)
 		http.Error(w, "Not Found", 404)
@@ -192,16 +197,16 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 	r.ParseForm()
 
 	type Page struct {
-		Page              string
-		Title             string
-		Message           Message
-		UID               account.UID
-		Profile           account.Profile
-		EditMode          bool
-		SelectedTag       string
+		Page              string          `json:"-"`
+		Title             string          `json:"-"`
+		Message           Message         `json:"-"`
+		UID               account.UID     `json:"-"`
+		Profile           account.Profile `json:"-"`
+		EditMode          bool            `json:"-"`
+		SelectedTag       string          `json:",omitempty"`
 		Bookmarks         account.Bookmarks
 		ArchivedBookmarks account.Bookmarks
-		SupportedDomains  []string
+		SupportedDomains  []string `json:"-"`
 	}
 	body := Page{
 		Message:           message,
@@ -252,6 +257,11 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 	sort.Sort(account.SortedBookmarks(body.Bookmarks))
 	sort.Sort(account.SortedBookmarks(body.ArchivedBookmarks))
 	// log.Printf("bookmarks %#v", body.Bookmarks)
+
+	if strings.HasSuffix(r.URL.Path, ".json") {
+		apiresponse.OK200(w, body)
+		return
+	}
 
 	err = t.ExecuteTemplate(w, templateName, body)
 	if err != nil {

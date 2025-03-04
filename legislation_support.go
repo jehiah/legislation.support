@@ -214,6 +214,7 @@ func main() {
 	router.HandleFunc("GET /sign_in", app.SUSI)
 	router.HandleFunc("GET /sign_out", app.SignOut)
 	router.HandleFunc("GET /robots.txt", app.RobotsTXT)
+	router.HandleFunc("GET /favicon.ico", http.NotFound)
 	if app.devMode {
 		router.HandleFunc("GET /internal/refresh", app.InternalRefresh)
 	}

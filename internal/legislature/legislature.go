@@ -66,7 +66,7 @@ type Legislation struct {
 // }
 
 type BodyID string        // i.e. "nyc"
-type LegislationID string // i.e. 1234-456 (must not contain a '/')
+type LegislationID string // i.e. 1234-456 (must not contain a '/') must be unique across sessions
 
 // Body represents a specific legislature
 type Body struct {
