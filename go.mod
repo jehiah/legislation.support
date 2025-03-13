@@ -1,6 +1,6 @@
 module github.com/jehiah/legislation.support
 
-go 1.23
+go 1.23.0
 
 require (
 	cloud.google.com/go/firestore v1.17.0
@@ -12,9 +12,8 @@ require (
 	github.com/jehiah/legislator v0.0.0-20240301144149-f4ba850725db
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
-	golang.org/x/net v0.33.0
-	golang.org/x/sync v0.10.0
+	golang.org/x/net v0.37.0
+	golang.org/x/sync v0.12.0
 	google.golang.org/api v0.214.0
 	google.golang.org/grpc v1.69.2
 )
@@ -48,10 +47,10 @@ require (
 	go.opentelemetry.io/otel v1.33.0 // indirect
 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	google.golang.org/appengine/v2 v2.0.6 // indirect
 	google.golang.org/genproto v0.0.0-20241230172942-26aa7a208def // indirect
