@@ -149,13 +149,13 @@ func main() {
 			}
 		}
 
-		log.Printf("resubmit %s as %s", record.LegislationID, printNo)
+		log.WithField("id", record.LegislationID).Warnf("resubmit %s as %s", record.LegislationID, printNo)
 
 		// // resubmit
 		err = db.UpdateBookmark(ctx, profile.ID, account.Bookmark{
 			Created:       time.Now().UTC(),
 			LegislationID: bill.ID,
-			BodyID:        record.BodyID,
+			BodyID:        bill.Body,
 			Tags:          record.Tags,
 			Notes:         record.Notes,
 			Oppose:        record.Oppose,
