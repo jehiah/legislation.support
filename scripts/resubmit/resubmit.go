@@ -21,14 +21,6 @@ import (
 // w/ our stdlib log fmt (Ldate | Ltime)
 const tsFmt = "2006/01/02 15:04:05"
 
-type Archived struct {
-	LegislationID legislature.LegislationID
-	BodyID        legislature.BodyID
-	Oppose        bool
-	Tags          []string
-	Notes         string
-}
-
 type SameAs struct {
 	SameAsPrintNo    legislature.LegislationID   `json:",omitempty"`
 	PreviousVersions []legislature.LegislationID `json:",omitempty"`
@@ -41,8 +33,8 @@ func flip(s legislature.LegislationID) legislature.LegislationID {
 
 func main() {
 	nyLegislationPath := flag.String("ny-legislation-path", "../../../ny_legislation", "path to ny-legislation repo")
-	archivedFile := flag.String("archived-file", "archived.json", "path to archived.json")
-	profileID := flag.String("profile-id", "jehiah-nyc", "profile id")
+	profileIDStr := flag.String("profile-id", "jehiah-nyc", "profile id")
+	dryRun := flag.Bool("dry-run", false, "dry run")
 	flag.Parse()
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: tsFmt, FullTimestamp: true})
 	ctx := context.Background()
@@ -70,23 +62,43 @@ func main() {
 		}
 	}
 
-	// now open the archived file
-	archived, err := os.ReadFile(*archivedFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var records []Archived
-	if err := json.Unmarshal(archived, &records); err != nil {
-		log.Fatal(err)
+	profileID := account.ProfileID(*profileIDStr)
+	if !account.IsValidProfileID(profileID) {
+		log.Fatalf("invalid profile id %s", profileID)
 	}
 
-	profile, err := db.GetProfile(ctx, account.ProfileID(*profileID))
+	profile, err := db.GetProfile(ctx, profileID)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if profile == nil {
-		log.Fatalf("profile %s not found", *profileID)
+		log.Fatalf("profile %s not found", profileID)
 	}
+
+	// load bookmarks that are archived
+	var records []account.Bookmark
+	b, err := db.GetProfileBookmarks(ctx, profileID)
+	if err != nil {
+		log.WithField("profileID", profileID).Fatalf("%s", err)
+	}
+	for _, bb := range b {
+		if !bb.Legislation.Session.Active() {
+			switch bb.BodyID {
+			case resolvers.NYSenate.ID:
+			case resolvers.NYAssembly.ID:
+			default:
+				continue
+			}
+			records = append(records, bb)
+		}
+	}
+
+	if len(records) == 0 {
+		log.Info("no matching archived bookmarks")
+		return
+	}
+	log.WithField("profile", profileID).Infof("checking %d archived bookmarks for resubmit", len(records))
+
 	a := nysenate.NewAPI(os.Getenv("NY_SENATE_TOKEN"))
 
 	for _, record := range records {
@@ -113,19 +125,21 @@ func main() {
 		}
 		body := resolvers.Bodies[bill.Body]
 
-		staleSameAs, err := db.SaveBill(ctx, *bill)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if staleSameAs || bill.SameAs != "" {
-			// refresh the sameAs bill (if needed)
-			sameBill, err := resolvers.Resolvers.Find(body.Bicameral).Refresh(ctx, bill.SameAs)
+		if !*dryRun {
+			staleSameAs, err := db.SaveBill(ctx, *bill)
 			if err != nil {
 				log.Fatal(err)
 			}
-			_, err = db.SaveBill(ctx, *sameBill)
-			if err != nil {
-				log.Fatal(err)
+			if staleSameAs || bill.SameAs != "" {
+				// refresh the sameAs bill (if needed)
+				sameBill, err := resolvers.Resolvers.Find(body.Bicameral).Refresh(ctx, bill.SameAs)
+				if err != nil {
+					log.Fatal(err)
+				}
+				_, err = db.SaveBill(ctx, *sameBill)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 
@@ -149,9 +163,14 @@ func main() {
 			}
 		}
 
+		if *dryRun {
+			log.Warnf("would resubmit %s as %s", record.LegislationID, printNo)
+			continue
+		}
+
 		log.WithField("id", record.LegislationID).Warnf("resubmit %s as %s", record.LegislationID, printNo)
 
-		// // resubmit
+		// resubmit
 		err = db.UpdateBookmark(ctx, profile.ID, account.Bookmark{
 			Created:       time.Now().UTC(),
 			LegislationID: bill.ID,
