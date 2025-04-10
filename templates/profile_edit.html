@@ -243,14 +243,14 @@ body {
 
 {{if .ArchivedBookmarks }}
 <div class="row mt-5" id="show-archived">
-  <h3>Archived</h3>
-  <p><a href="" onclick="document.getElementById('archived').style.display='block'; document.getElementById('show-archived').style.display='none'; return false; ">See {{len .ArchivedBookmarks}} saved bills from past legislative sessions</a></p>
+  <h3>Past Sessions</h3>
+  <p><a href="" >See {{len .ArchivedBookmarks}} saved bills from past legislative sessions</a></p>
 </div>
 {{end}}
 
 <div id="archived" style="display: none;">
   <div class="row mt-5">
-    <h3>Archived</h3>
+    <h3>Past Sessions</h3>
   </div>
 
   {{range .ArchivedBookmarks}}
@@ -569,6 +569,34 @@ document.getElementById('profile-save').addEventListener("click", _ => {
   })
 })
 
+function showArchived(showHide, updateURL) {
+  if (showHide) {
+    document.getElementById('archived').style.display='block';
+    document.getElementById('show-archived').style.display='none';
+  } else {
+    document.getElementById('archived').style.display='none';
+    document.getElementById('show-archived').style.display='block';
+  }
+  
+  if (updateURL) {
+    const q = new URLSearchParams(window.location.search)
+    if (showHide) {
+      q.set('past_sessions', 'Y')
+    } else {
+      q.delete('past_sessions')
+    }
+    let p = window.location.pathname
+    if (qr.toString() !== "") {
+      p += "?" + q.toString()
+    }
+    history.pushState({}, '', p);
+  }
+}
+
+document.querySelector("#show-archived a").addEventListener("click", event => {
+  event.preventDefault()
+  showArchived(true, true)
+})
 
 
 const qs = new URLSearchParams(window.location.search)
@@ -580,6 +608,8 @@ if (tags.size > 0) {
     element.classList.toggle("hidden", !hasTag)
   });
 }
+
+showArchived(qs.get("past_sessions") == "Y", false)
 
 
 const messageSuccess = localStorage.getItem('message-success')
