@@ -67,6 +67,14 @@ type Legislation struct {
 
 type BodyID string        // i.e. "nyc"
 type LegislationID string // i.e. 1234-456 (must not contain a '/') must be unique across sessions
+type GlobalID struct {
+	BodyID
+	LegislationID
+}
+
+func (g GlobalID) String() string {
+	return fmt.Sprintf("%s.%s", g.BodyID, g.LegislationID)
+}
 
 // Body represents a specific legislature
 type Body struct {
@@ -262,4 +270,12 @@ func CalculateSponsorChanges(a, b Legislation) []SponsorChange {
 
 type Changes struct {
 	Sponsors []SponsorChange
+}
+
+type ResubmitMapping map[GlobalID]GlobalID
+
+func (m ResubmitMapping) Extend(mm ResubmitMapping) {
+	for k, v := range mm {
+		m[k] = v
+	}
 }

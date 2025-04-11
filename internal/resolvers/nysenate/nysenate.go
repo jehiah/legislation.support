@@ -153,7 +153,7 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 func (a NYSenate) Refresh(ctx context.Context, billID legislature.LegislationID) (*legislature.Legislation, error) {
 	session, printNo, _ := strings.Cut(string(billID), "-")
 	if !strings.HasPrefix(printNo, "S") {
-		return nil, fmt.Errorf("invalid %q", billID)
+		return nil, fmt.Errorf("NYSenate invalid %q", billID)
 	}
 	bill, err := a.api.GetBill(ctx, session, printNo)
 	if err != nil {
@@ -165,7 +165,7 @@ func (a NYSenate) Refresh(ctx context.Context, billID legislature.LegislationID)
 func (a NYAssembly) Refresh(ctx context.Context, billID legislature.LegislationID) (*legislature.Legislation, error) {
 	session, printNo, _ := strings.Cut(string(billID), "-")
 	if !strings.HasPrefix(printNo, "A") {
-		return nil, fmt.Errorf("invalid %q", billID)
+		return nil, fmt.Errorf("NYAssembly invalid %q", billID)
 	}
 	bill, err := a.api.GetBill(ctx, session, printNo)
 	if err != nil {

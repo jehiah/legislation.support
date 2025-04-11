@@ -13,7 +13,7 @@ import (
 	"github.com/jehiah/legislation.support/internal/datastore"
 	"github.com/jehiah/legislation.support/internal/legislature"
 	"github.com/jehiah/legislation.support/internal/resolvers"
-	"github.com/jehiah/legislation.support/internal/resolvers/nysenate"
+	"github.com/jehiah/legislation.support/internal/resolvers/nyc"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,13 +22,75 @@ import (
 const tsFmt = "2006/01/02 15:04:05"
 
 type SameAs struct {
-	SameAsPrintNo    legislature.LegislationID   `json:",omitempty"`
-	PreviousVersions []legislature.LegislationID `json:",omitempty"`
+	SameAsPrintNo    string   `json:",omitempty"`
+	PreviousVersions []string `json:",omitempty"`
 }
 
-func flip(s legislature.LegislationID) legislature.LegislationID {
-	a, b, _ := strings.Cut(string(s), "-")
+func flipNyPrintNo(s string) legislature.LegislationID {
+	a, b, _ := strings.Cut(s, "-")
 	return legislature.LegislationID(b + "-" + a)
+}
+
+func supportsResubmit(bodyID legislature.BodyID) bool {
+	switch bodyID {
+	case resolvers.NYSenate.ID:
+	case resolvers.NYAssembly.ID:
+	case resolvers.NYCCouncil.ID:
+	default:
+		return false
+	}
+	return true
+}
+
+func buildNYResubmitMapping(nyLegislationPath string) legislature.ResubmitMapping {
+	mapping := make(legislature.ResubmitMapping)
+	files, err := filepath.Glob(filepath.Join(nyLegislationPath, "bills", "2025-index.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, fn := range files {
+		var index map[string]SameAs
+		body, err := os.ReadFile(fn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.Unmarshal(body, &index); err != nil {
+			log.Fatal(err)
+		}
+		for printNo, sameAs := range index {
+			for _, prevPrintNo := range sameAs.PreviousVersions {
+				prev := legislature.GlobalID{
+					BodyID:        resolvers.NYSenate.ID,
+					LegislationID: flipNyPrintNo(prevPrintNo),
+				}
+				current := legislature.GlobalID{
+					BodyID:        resolvers.NYSenate.ID,
+					LegislationID: flipNyPrintNo(printNo),
+				}
+				if strings.HasPrefix(prevPrintNo, "A") {
+					prev.BodyID = resolvers.NYAssembly.ID
+				}
+				if strings.HasPrefix(printNo, "A") {
+					current.BodyID = resolvers.NYAssembly.ID
+				}
+				mapping[prev] = current
+			}
+		}
+	}
+	return mapping
+}
+func buildNYCReesubmitMapping(ctx context.Context) legislature.ResubmitMapping {
+	m := make(legislature.ResubmitMapping)
+	nycAPI := nyc.New(resolvers.NYCCouncil)
+	currentYear := time.Now().Year()
+	for year := 2020; year <= currentYear; year++ {
+		v, err := nycAPI.Resubmit(context.Background(), year)
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.Extend(v)
+	}
+	return m
 }
 
 func main() {
@@ -40,27 +102,8 @@ func main() {
 	ctx := context.Background()
 	db := datastore.New(datastore.NewClient(ctx))
 
-	mapping := make(map[legislature.LegislationID]legislature.LegislationID)
-
-	files, err := filepath.Glob(filepath.Join(*nyLegislationPath, "bills", "2025-index.json"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, fn := range files {
-		var index map[legislature.LegislationID]SameAs
-		body, err := os.ReadFile(fn)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := json.Unmarshal(body, &index); err != nil {
-			log.Fatal(err)
-		}
-		for printNo, sameAs := range index {
-			for _, prevPrintNo := range sameAs.PreviousVersions {
-				mapping[flip(prevPrintNo)] = flip(printNo)
-			}
-		}
-	}
+	mapping := buildNYResubmitMapping(*nyLegislationPath)
+	mapping.Extend(buildNYCReesubmitMapping(ctx))
 
 	profileID := account.ProfileID(*profileIDStr)
 	if !account.IsValidProfileID(profileID) {
@@ -82,15 +125,10 @@ func main() {
 		log.WithField("profileID", profileID).Fatalf("%s", err)
 	}
 	for _, bb := range b {
-		if !bb.Legislation.Session.Active() {
-			switch bb.BodyID {
-			case resolvers.NYSenate.ID:
-			case resolvers.NYAssembly.ID:
-			default:
-				continue
-			}
-			records = append(records, bb)
+		if bb.Legislation.Session.Active() || !supportsResubmit(bb.BodyID) {
+			continue
 		}
+		records = append(records, bb)
 	}
 
 	if len(records) == 0 {
@@ -99,29 +137,38 @@ func main() {
 	}
 	log.WithField("profile", profileID).Infof("checking %d archived bookmarks for resubmit", len(records))
 
-	a := nysenate.NewAPI(os.Getenv("NY_SENATE_TOKEN"))
-
 	for _, record := range records {
-		switch record.BodyID {
-		case resolvers.NYSenate.ID:
-		case resolvers.NYAssembly.ID:
-		default:
-			continue
-		}
 
-		printNo, ok := mapping[record.LegislationID]
+		newMaping, ok := mapping[legislature.GlobalID{
+			BodyID:        record.BodyID,
+			LegislationID: record.LegislationID,
+		}]
+		logFields := log.Fields{
+			"bodyID":        record.BodyID,
+			"legislationID": record.LegislationID,
+			"newMapping":    newMaping,
+		}
 		if !ok {
-			log.Printf("no mapping for %s", record.LegislationID)
+			log.Printf("no mapping for %s %s", record.BodyID, record.LegislationID)
+			continue
+		}
+		log.Printf("mapping %s %s => %s", record.BodyID, record.LegislationID, newMaping)
+
+		bookmark, err := db.GetBookmark(ctx, profile.ID, account.BookmarkKey(newMaping.BodyID, newMaping.LegislationID))
+		if err != nil {
+			log.WithFields(logFields).Fatalf("%+v", err)
+		}
+		if bookmark != nil {
+			log.Infof("bookmark already exists for %s => %s", record.LegislationID, newMaping.LegislationID)
 			continue
 		}
 
-		matchedURL := a.Link(printNo)
-		bill, err := resolvers.Lookup(ctx, matchedURL)
+		bill, err := resolvers.Resolvers.Find(newMaping.BodyID).Refresh(ctx, newMaping.LegislationID)
 		if err != nil {
-			log.Fatal(err)
+			log.WithFields(logFields).Fatal(err)
 		}
 		if bill == nil {
-			log.Fatalf("legislation matching url %q not found", matchedURL)
+			log.WithFields(logFields).Fatalf("legislation %s %s not found", newMaping.BodyID, newMaping.LegislationID)
 		}
 		body := resolvers.Bodies[bill.Body]
 
@@ -143,32 +190,23 @@ func main() {
 			}
 		}
 
-		bookmark, err := db.GetBookmark(ctx, profile.ID, account.BookmarkKey(bill.Body, bill.ID))
-		if err != nil {
-			log.Fatal(err)
-		}
-		if bookmark != nil {
-			log.Infof("bookmark already exists for %s", bill.ID)
-			continue
-		}
-
 		if bill.SameAs != "" {
 			bookmark, err := db.GetBookmark(ctx, profile.ID, account.BookmarkKey(body.Bicameral, bill.SameAs))
 			if err != nil {
 				log.Fatal(err)
 			}
 			if bookmark != nil {
-				log.Infof("bookmark already exists for SameAs %s (bill %s)", bill.SameAs, bill.ID)
+				log.Infof("bookmark already exists for %s => SameAs %s (also %s)", record.LegislationID, bill.SameAs, bill.ID)
 				continue
 			}
 		}
 
 		if *dryRun {
-			log.Warnf("would resubmit %s as %s", record.LegislationID, printNo)
+			log.Warnf("would resubmit %s as %s", record.LegislationID, newMaping)
 			continue
 		}
 
-		log.WithField("id", record.LegislationID).Warnf("resubmit %s as %s", record.LegislationID, printNo)
+		log.WithField("id", record.LegislationID).Warnf("resubmiting %s as %s", record.LegislationID, newMaping)
 
 		// resubmit
 		err = db.UpdateBookmark(ctx, profile.ID, account.Bookmark{

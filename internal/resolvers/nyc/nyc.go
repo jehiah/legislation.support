@@ -40,6 +40,10 @@ func (n NYC) Body() legislature.Body { return n.body }
 
 var introPattern = regexp.MustCompile("/[0-9]{1,4}-20[12][0-9]$")
 
+func fileToLegislationID(file string) legislature.LegislationID {
+	return legislature.LegislationID(strings.TrimPrefix(file, "Int "))
+}
+
 func (n NYC) SupportedDomains() []string {
 	return []string{"legistar.council.nyc.gov", "intro.nyc"}
 }
@@ -164,7 +168,7 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 
 	return &legislature.Legislation{
 		Body:           n.body.ID,
-		ID:             legislature.LegislationID(strings.TrimPrefix(d.File, "Int ")),
+		ID:             fileToLegislationID(d.File),
 		DisplayID:      d.File,
 		Title:          d.Name,
 		Summary:        d.Title,
@@ -210,4 +214,32 @@ func (n NYC) IntroJSON(ctx context.Context, u string) (*db.Legislation, error) {
 		return nil, nil
 	}
 	return &d, err
+}
+
+type resubmit struct {
+	Resubmitted []resubmitMapping
+}
+type resubmitMapping struct {
+	FromFile string
+	ToFile   string
+}
+
+func (n NYC) Resubmit(ctx context.Context, year int) (legislature.ResubmitMapping, error) {
+	u := fmt.Sprintf("https://intro.nyc/data/resubmit_%d.json", year)
+	var r resubmit
+	err := n.get(ctx, u, &r)
+	if err != nil {
+		return nil, err
+	}
+	m := make(legislature.ResubmitMapping)
+	for _, v := range r.Resubmitted {
+		m[legislature.GlobalID{
+			BodyID:        n.body.ID,
+			LegislationID: fileToLegislationID(v.FromFile),
+		}] = legislature.GlobalID{
+			BodyID:        n.body.ID,
+			LegislationID: fileToLegislationID(v.ToFile),
+		}
+	}
+	return m, nil
 }
