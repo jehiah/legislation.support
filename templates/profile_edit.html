@@ -472,7 +472,7 @@ Array.from(document.querySelectorAll('.needs-validation')).forEach(form => {
       editForm.querySelectorAll('.legislation-title')[0].textContent = b.Legislation.Title;
       editForm.querySelectorAll('.legislation-url>a')[0].textContent = b.Legislation.URL;
       editForm.querySelectorAll('.legislation-url>a')[0].href = b.Legislation.URL;
-      editForm.querySelectorAll('textarea')[0].value = b.Notes;
+      editForm.querySelectorAll('textarea')[0].value = b.Notes? b.Notes : "";
       editForm.querySelectorAll('input[name="tags"]')[0].value = b.Tags === null ? "": b.Tags.join(' ');
       editForm.querySelectorAll('input[name="support"]')[0].checked = b.Oppose;
     })
