@@ -38,10 +38,18 @@ func New(b legislature.Body) *NYC {
 
 func (n NYC) Body() legislature.Body { return n.body }
 
-var introPattern = regexp.MustCompile("/[0-9]{1,4}-20[12][0-9]$")
+var introPattern = regexp.MustCompile("/(res-)?[0-9]{1,4}-20[12][0-9]$")
 
 func fileToLegislationID(file string) legislature.LegislationID {
-	return legislature.LegislationID(strings.TrimPrefix(file, "Int "))
+	fileType, fileNo, _ := strings.Cut(file, " ")
+	switch fileType {
+	case "Int":
+		return legislature.LegislationID(fileNo)
+	case "Res":
+		return legislature.LegislationID("res-" + fileNo)
+	default:
+		return ""
+	}
 }
 
 func (n NYC) SupportedDomains() []string {
@@ -82,7 +90,7 @@ func (n NYC) Refresh(ctx context.Context, id legislature.LegislationID) (*legisl
 	u := &url.URL{
 		Scheme: "https",
 		Host:   "intro.nyc",
-		Path:   "/" + n.DisplayID(id),
+		Path:   "/" + string(id),
 	}
 	d, err := n.IntroJSON(ctx, u.String())
 	if err != nil {
@@ -95,7 +103,7 @@ func (n NYC) Raw(ctx context.Context, l *legislature.Legislation) (*db.Legislati
 	u := &url.URL{
 		Scheme: "https",
 		Host:   "intro.nyc",
-		Path:   "/" + n.DisplayID(l.ID),
+		Path:   "/" + string(l.ID),
 	}
 	return n.IntroJSON(ctx, u.String())
 }
@@ -103,11 +111,17 @@ func (n NYC) Link(l legislature.LegislationID) *url.URL {
 	return &url.URL{
 		Scheme: "https",
 		Host:   "intro.nyc",
-		Path:   "/" + n.DisplayID(l),
+		Path:   "/" + string(l),
 	}
 }
+
+// 1234-2020 => 1234-2020
+// res-1234-2020 => Res 1234-2020
 func (n NYC) DisplayID(l legislature.LegislationID) string {
-	return strings.TrimPrefix(string(l), "Int ")
+	if strings.HasPrefix(string(l), "res-") {
+		return "Res " + strings.TrimPrefix(string(l), "res-")
+	}
+	return string(l)
 }
 
 func (n NYC) ActivePeople(ctx context.Context) ([]db.Person, error) {
@@ -152,6 +166,19 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 	if d == nil {
 		return nil
 	}
+	fileType, fileNo, _ := strings.Cut(d.File, " ")
+
+	path := fileNo
+	legType := legislature.BillType
+	switch fileType {
+	case "Int":
+	case "Res":
+		path = "res-" + fileNo
+		legType = legislature.ResolutionType
+	default:
+		log.Printf("unknown file type %q %q", fileType, d.File)
+		return nil
+	}
 
 	sponsors := make([]legislature.Member, 0, len(d.Sponsors))
 	for _, p := range d.Sponsors {
@@ -176,9 +203,10 @@ func (n NYC) NewLegislation(d *db.Legislation) *legislature.Legislation {
 		IntroducedDate: d.IntroDate,
 		Session:        Sessions.Find(d.IntroDate.Year()),
 		Status:         d.StatusName,
+		Type:           legType,
 		Sponsors:       sponsors,
 		LastModified:   d.LastModified,
-		URL:            "https://intro.nyc/" + strings.TrimPrefix(d.File, "Int "),
+		URL:            "https://intro.nyc/" + path,
 	}
 }
 

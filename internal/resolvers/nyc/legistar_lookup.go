@@ -40,23 +40,28 @@ func (n NYC) LookupLegistarLegislationDetail(ctx context.Context, u *url.URL) (*
 	if err != nil {
 		return nil, err
 	}
-	// Expecting The New York City Council - File #: Int 1141-2018
+	// Expecting The New York City Council - File #: Int 1234-2020
+	// Expecting The New York City Council - File #: Res 1234-2020
 	title := ParseTitle(body)
-	log.Printf("got body %q", title)
-	prefix := "The New York City Council - File #: Int "
-	if strings.HasPrefix(title, prefix) {
-		fileNo := strings.TrimPrefix(title, prefix)
-		log.Printf("fileNo %#v", fileNo)
-		// convert to an intro.nyc link
-		return &url.URL{
-			Scheme: "https",
-			Host:   "intro.nyc",
-			Path:   "/" + fileNo,
-		}, nil
-	} else {
+	log.Printf("got title %q", title)
+	prefix := "The New York City Council - File #: "
+	if !strings.HasPrefix(title, prefix) {
 		log.Printf("title not found")
+		return nil, nil
 	}
-	return nil, nil
+	title = strings.TrimPrefix(title, prefix)
+
+	fileNo := strings.TrimPrefix(title, "Int ")
+	if strings.HasPrefix(fileNo, "Res ") {
+		fileNo = strings.ReplaceAll(fileNo, "Res ", "res-")
+	}
+	log.Printf("fileNo %#v", fileNo)
+	// convert to an intro.nyc link
+	return &url.URL{
+		Scheme: "https",
+		Host:   "intro.nyc",
+		Path:   "/" + fileNo,
+	}, nil
 }
 
 var (

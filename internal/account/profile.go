@@ -121,6 +121,9 @@ func (b Bookmark) DisplayTags() []DisplayTag {
 		// if len(b.Legislation.Sponsors) > 0 {
 		// 	out = append(out, DisplayTag{Tag: "sponsor:" + b.Legislation.Sponsors[0].FullName, Class: "sponsor"})
 		// }
+		if b.Legislation.Type == legislature.ResolutionType {
+			out = append(out, DisplayTag{Tag: "Resolution", Class: "resolution"})
+		}
 	}
 	for _, tag := range b.Tags {
 		out = append(out, DisplayTag{Tag: tag, Class: "tag"})

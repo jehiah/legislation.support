@@ -200,12 +200,19 @@ func (bill *Bill) Legislation(body legislature.BodyID) *legislature.Legislation 
 		})
 	}
 
+	legType := legislature.BillType
+	if bill.BillType.Resolution {
+		legType = legislature.ResolutionType
+	}
+
 	return &legislature.Legislation{
 		ID:             bill.ID(),
 		Body:           body,
 		DisplayID:      bill.BasePrintNo,
 		Title:          bill.Title,
 		Summary:        bill.Summary,
+		Type:           legType,
+		Status:         bill.Status.StatusDesc,
 		IntroducedDate: t,
 		Session:        session,
 		SameAs:         bill.GetSameAs(),

@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+type LegislationType string
+
+var (
+	ResolutionType LegislationType = "Resolution"
+	BillType       LegislationType = "Bill"
+	UnknownType    LegislationType = ""
+)
+
 // Legislation is uniquely known by an ID w/in a BODY
 type Legislation struct {
 	Body        BodyID
@@ -19,6 +27,7 @@ type Legislation struct {
 	URL         string
 	Session     Session
 	Status      string
+	Type        LegislationType // i.e. Resolution, Bill, etc
 	// Committee ?
 	// Prime Sponsor
 	Sponsors []Member
