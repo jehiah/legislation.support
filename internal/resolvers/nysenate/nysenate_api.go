@@ -150,54 +150,59 @@ func (b Bill) GetVotes() VoteEntries {
 			// TODO: all versions?
 			continue
 		}
-		for _, m := range v.MemberVotes.Items.Excused.Items {
-			o = append(o, VoteEntry{
-				ShortName: m.ShortName,
-				MemberID:  m.MemberID,
-				Chamber:   m.Chamber,
-				VoteType:  v.VoteType,
-				Vote:      "Excused",
-			})
-		}
-		for _, m := range v.MemberVotes.Items.Aye.Items {
-			o = append(o, VoteEntry{
-				ShortName: m.ShortName,
-				MemberID:  m.MemberID,
-				Chamber:   m.Chamber,
-				VoteType:  v.VoteType,
-				Vote:      "Aye",
-			})
-		}
-		for _, m := range v.MemberVotes.Items.Nay.Items {
-			o = append(o, VoteEntry{
-				ShortName: m.ShortName,
-				MemberID:  m.MemberID,
-				Chamber:   m.Chamber,
-				VoteType:  v.VoteType,
-				Vote:      "Nay",
-			})
-		}
-		for _, m := range v.MemberVotes.Items.AyeWithReservations.Items {
-			o = append(o, VoteEntry{
-				ShortName: m.ShortName,
-				MemberID:  m.MemberID,
-				Chamber:   m.Chamber,
-				VoteType:  v.VoteType,
-				Vote:      "Aye",
-				// TODO: add note "with reservations"
-			})
-		}
-		for _, m := range v.MemberVotes.Items.Absent.Items {
-			o = append(o, VoteEntry{
-				ShortName: m.ShortName,
-				MemberID:  m.MemberID,
-				Chamber:   m.Chamber,
-				VoteType:  v.VoteType,
-				Vote:      "Absent",
-			})
-		}
-		// TODO: Abstained ?
+		o = append(o, v.GetVotes()...)
 	}
+	return o
+}
+func (v BillVote) GetVotes() VoteEntries {
+	var o VoteEntries
+	for _, m := range v.MemberVotes.Items.Excused.Items {
+		o = append(o, VoteEntry{
+			ShortName: m.ShortName,
+			MemberID:  m.MemberID,
+			Chamber:   m.Chamber,
+			VoteType:  v.VoteType,
+			Vote:      "Excused",
+		})
+	}
+	for _, m := range v.MemberVotes.Items.Aye.Items {
+		o = append(o, VoteEntry{
+			ShortName: m.ShortName,
+			MemberID:  m.MemberID,
+			Chamber:   m.Chamber,
+			VoteType:  v.VoteType,
+			Vote:      "Aye",
+		})
+	}
+	for _, m := range v.MemberVotes.Items.Nay.Items {
+		o = append(o, VoteEntry{
+			ShortName: m.ShortName,
+			MemberID:  m.MemberID,
+			Chamber:   m.Chamber,
+			VoteType:  v.VoteType,
+			Vote:      "Nay",
+		})
+	}
+	for _, m := range v.MemberVotes.Items.AyeWithReservations.Items {
+		o = append(o, VoteEntry{
+			ShortName: m.ShortName,
+			MemberID:  m.MemberID,
+			Chamber:   m.Chamber,
+			VoteType:  v.VoteType,
+			Vote:      "Aye",
+			// TODO: add note "with reservations"
+		})
+	}
+	for _, m := range v.MemberVotes.Items.Absent.Items {
+		o = append(o, VoteEntry{
+			ShortName: m.ShortName,
+			MemberID:  m.MemberID,
+			Chamber:   m.Chamber,
+			VoteType:  v.VoteType,
+			Vote:      "Absent",
+		})
+	}
+	// TODO: Abstained ?
 	return o
 }
 
@@ -398,6 +403,21 @@ type MemberVotes struct {
 	Nay                 MemberEntryList `json:"NAY"` // ?
 	Excused             MemberEntryList `json:"EXC"` // excused
 	Absent              MemberEntryList `json:"Absent"`
+}
+
+func (mv *MemberVotes) Add(vote string, e MemberEntry) {
+	switch vote {
+	case "Y", "AYE", "YES":
+		mv.Aye.Items = append(mv.Aye.Items, e)
+	case "N", "NO", "NAY":
+		mv.Nay.Items = append(mv.Nay.Items, e)
+	case "ER", "EXCUSED":
+		mv.Excused.Items = append(mv.Excused.Items, e)
+	case "ABSENT":
+		mv.Absent.Items = append(mv.Absent.Items, e)
+	default:
+		log.Warnf("unknown vote type %q for %s", vote, e.ShortName)
+	}
 }
 
 // Note: response might have duplicates

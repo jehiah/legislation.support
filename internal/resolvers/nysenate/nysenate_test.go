@@ -10,9 +10,15 @@ import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 )
 
+var api *NYSenateAPI
+
+func TestMain(m *testing.M) {
+	api = NewAPI(os.Getenv("NY_SENATE_TOKEN"))
+	os.Exit(m.Run())
+}
+
 func TestGetBill(t *testing.T) {
-	a := NewAPI(os.Getenv("NY_SENATE_TOKEN"))
-	b, err := a.GetBill(context.Background(), "2021", "S5130")
+	b, err := api.GetBill(context.Background(), "2021", "S5130")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,8 +26,7 @@ func TestGetBill(t *testing.T) {
 }
 
 func TestGetMembers(t *testing.T) {
-	a := NewAPI(os.Getenv("NY_SENATE_TOKEN"))
-	m, err := a.GetMembers(context.Background(), Sessions[0], "senate")
+	m, err := api.GetMembers(context.Background(), Sessions[0], "senate")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +90,6 @@ func TestNYAssemblyLookup(t *testing.T) {
 	}
 	a := NewNYAssembly(legislature.Body{}, os.Getenv("NY_SENATE_TOKEN"))
 	for i, tc := range tests {
-		tc := tc
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Logf("%#v", tc)
 			u, err := url.Parse(tc.url)

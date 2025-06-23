@@ -43,6 +43,15 @@ func (a NYSenateAPI) AssemblyVotes(ctx context.Context, members []legislature.Me
 	return &bill, err
 }
 
+func getClass(a []html.Attribute) string {
+	for _, attr := range a {
+		if attr.Key == "class" {
+			return attr.Val
+		}
+	}
+	return ""
+}
+
 func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, error) {
 	memberLookup := make(map[string]int)
 	for _, m := range members {
@@ -50,9 +59,10 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 	}
 	var out []BillVote
 	z := html.NewTokenizer(r)
-	var inTable, inCaption, dateNext, committeeNext bool
+	var inTable, inCaption, dateNext, committeeNext, inFloorVote, inVoteName, inVote, inName bool
 	var text, dateStr, caption, commitee string
 	var tokens []string
+	var bv BillVote
 
 	for {
 		tt := z.Next()
@@ -69,6 +79,7 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 			switch {
 			case inCaption && text == "DATE:":
 				dateNext = true
+				text = ""
 			case inCaption && text == "Committee:":
 				committeeNext = true
 			case inCaption && committeeNext:
@@ -93,9 +104,52 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 				text = ""
 			case "caption":
 				inCaption = true
+				text = ""
+			case "div":
+				// class floor-vote-container
+				switch getClass(token.Attr) {
+				case "floor-vote-container":
+					inFloorVote = true
+				case "vote-name":
+					inVoteName = true
+				case "vote":
+					inVote = true
+				case "name":
+					inName = true
+				}
 			}
 		case html.EndTagToken:
 			switch token.Data {
+			case "div":
+				switch {
+				case inVoteName && inName:
+					tokens = append(tokens, text)
+					text = ""
+					inName = false
+				case inVoteName && inVote:
+					tokens = append(tokens, text)
+					text = ""
+					inVote = false
+				case inVoteName:
+					inVoteName = false
+				case inFloorVote:
+					inFloorVote = false
+					mv := &MemberVotes{}
+					for i := 0; i+1 < len(tokens); i += 2 {
+						vote := strings.ToUpper(tokens[i])
+						shortName := strings.ToUpper(tokens[i+1])
+						vote = strings.TrimSpace(strings.TrimSuffix(vote, "‡"))
+						e := MemberEntry{
+							MemberID:  memberLookup[shortName],
+							Chamber:   bv.Committee.Chamber,
+							ShortName: shortName,
+						}
+						mv.Add(vote, e)
+					}
+					bv.MemberVotes.Items = *mv
+					out = append(out, bv)
+					tokens = nil
+				}
 			case "td":
 				if text != "" && inTable && !inCaption {
 					tokens = append(tokens, text)
@@ -104,46 +158,30 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 			case "table":
 				inTable = false
 				_, action, _ := strings.Cut(caption, "Action:")
-				bv := BillVote{
+				bv = BillVote{
 					VoteDate: dateStr,
 					VoteType: strings.TrimSpace(action), // Favorable refer to committee Ways and Means
 				}
 				bv.Committee.Chamber = "ASSEMBLY"
 				bv.Committee.Name = commitee
-				mv := MemberVotes{}
+				mv := &MemberVotes{}
 				for i := 0; i+1 < len(tokens); i += 2 {
 					shortName := strings.ToUpper(tokens[i])
-					switch tokens[i+1] {
-					case "Y", "Aye":
-						mv.Aye.Items = append(mv.Aye.Items, MemberEntry{
-							MemberID:  memberLookup[shortName],
-							Chamber:   bv.Committee.Chamber,
-							ShortName: shortName,
-						})
-					case "N", "NO", "Nay":
-						mv.Nay.Items = append(mv.Nay.Items, MemberEntry{
-							MemberID:  memberLookup[shortName],
-							Chamber:   bv.Committee.Chamber,
-							ShortName: shortName,
-						})
-					case "ER", "Excused":
-						mv.Excused.Items = append(mv.Excused.Items, MemberEntry{
-							MemberID:  memberLookup[shortName],
-							Chamber:   bv.Committee.Chamber,
-							ShortName: shortName,
-						})
-					case "Absent":
-						mv.Absent.Items = append(mv.Absent.Items, MemberEntry{
-							MemberID:  memberLookup[shortName],
-							Chamber:   bv.Committee.Chamber,
-							ShortName: shortName,
-						})
-					default:
-						log.WithField("caption", caption).Infof("unkown td %q %q", tokens[i], tokens[i+1])
+					vote := strings.ToUpper(tokens[i+1])
+					e := MemberEntry{
+						MemberID:  memberLookup[shortName],
+						Chamber:   bv.Committee.Chamber,
+						ShortName: shortName,
 					}
+					mv.Add(vote, e)
 				}
-				bv.MemberVotes.Items = mv
-				out = append(out, bv)
+				bv.MemberVotes.Items = *mv
+				if len(tokens) > 0 {
+					out = append(out, bv)
+				} else {
+					log.Warnf("skipping empty vote %#v", bv)
+				}
+				tokens = nil
 			case "caption":
 				inCaption = false
 			case "html":
