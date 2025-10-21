@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -107,7 +108,7 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 	}
 	pageBody.Scorecard, err = resolvers.Resolvers.Find(body.ID).Scorecard(ctx, scorable)
 	if err != nil {
-		log.WithFields(fields).Errorf("%#v", err)
+		log.WithFields(fields).Errorf("%#v, %#v", err, errors.Unwrap(err))
 		a.WebInternalError500(w, "")
 		return
 	}

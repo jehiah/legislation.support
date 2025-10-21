@@ -61,6 +61,7 @@ func (a NYSenateAPI) Scorecard(ctx context.Context, body legislature.Body, bookm
 	// var finalBookmarks []legislature.Scorable
 
 	g := new(errgroup.Group)
+	g.SetLimit(10)
 	noSameAs := make([]bool, len(bookmarks))
 	for i, b := range bookmarks {
 		i, b := i, b
