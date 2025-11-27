@@ -9,6 +9,7 @@ type ScorecardMetadata struct {
 }
 
 type ScorecardPerson struct {
+	ID       int
 	FullName string
 	Party    string
 	URL      string

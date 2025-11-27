@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
-	"github.com/jehiah/legislator/db"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,7 +19,6 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 		Data: make([]legislature.ScoredBookmark, len(bookmarks)),
 	}
 
-	var people []db.Person
 	allPeople, err := a.ActivePeople(ctx)
 	if err != nil {
 		return s, err
@@ -45,12 +43,12 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 			district = strconv.Itoa(md.District)
 		}
 		s.People = append(s.People, legislature.ScorecardPerson{
+			ID:       p.ID,
 			FullName: strings.TrimSpace(p.FullName),
 			URL:      "https://intro.nyc/councilmembers/" + p.Slug,
 			District: district,
 			// TODO: Party
 		})
-		people = append(people, p)
 	}
 
 	// TODO: cap concurency
@@ -66,18 +64,18 @@ func (a NYC) Scorecard(ctx context.Context, bookmarks []legislature.Scorable) (*
 			}
 			sb.Status = raw.StatusName
 			sb.Committee = strings.TrimPrefix(raw.BodyName, "Committee on ")
-			scores := make(map[string]string)
+			scores := make(map[int]string)
 			for _, sponsor := range raw.Sponsors {
-				scores[strings.TrimSpace(sponsor.FullName)] = "Sponsor"
+				scores[sponsor.ID] = "Sponsor"
 			}
 			for _, h := range raw.History {
 				for _, v := range h.Votes {
-					scores[strings.TrimSpace(v.FullName)] = v.Vote
+					scores[v.ID] = v.Vote
 				}
 			}
 
 			for _, p := range s.People {
-				sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.FullName], Desired: !sb.Oppose})
+				sb.Scores = append(sb.Scores, legislature.Score{Status: scores[p.ID], Desired: !sb.Oppose})
 			}
 			s.Data[i] = sb
 			return nil

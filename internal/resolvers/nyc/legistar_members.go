@@ -19,6 +19,9 @@ func (a NYC) Members(ctx context.Context, session legislature.Session) ([]legisl
 	} else {
 		allPeople, err = a.AllPeople(ctx)
 	}
+	if err != nil {
+		return nil, err
+	}
 
 	md, err := a.PersonMetadata(ctx)
 	if err != nil {
