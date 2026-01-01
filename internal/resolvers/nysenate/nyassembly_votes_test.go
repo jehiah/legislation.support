@@ -11,7 +11,6 @@ func TestAssemblyVotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	bill, err := api.AssemblyVotes(ctx, m, "2021", "A09275")
 	if err != nil {
 		t.Fatal(err)
@@ -60,8 +59,8 @@ func TestAssemblyVotes(t *testing.T) {
 	}
 	for _, v := range bill.Votes.Items[2:] {
 		t.Logf("%#v", v)
-		if len(v.GetVotes()) != 149 {
-			t.Errorf("got %d votes expected 149", len(v.GetVotes()))
+		if len(v.GetVotes()) != 150 {
+			t.Errorf("got %d votes expected 150", len(v.GetVotes()))
 		}
 		for _, m := range v.GetVotes() {
 			t.Logf("member %s %d %s", m.ShortName, m.MemberID, m.Vote)
@@ -72,4 +71,28 @@ func TestAssemblyVotes(t *testing.T) {
 	}
 	// t.Logf("%#v", bill.Votes.Items)
 
+	bill, err = api.AssemblyVotes(ctx, m, "2025", "A6613")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bill.Votes.Items) != 3 {
+		t.Fatalf("expected 3 votes got %d", len(bill.Votes.Items))
+	}
+	v := bill.Votes.Items[2]
+
+	if len(v.GetVotes()) != 150 {
+		t.Errorf("got %d votes expected 150", len(v.GetVotes()))
+	}
+	if len(v.MemberVotes.Items.Aye.Items) != 144 {
+		t.Errorf("got %d aye votes expected 144", len(v.MemberVotes.Items.Aye.Items))
+	}
+	var hasAlvarez bool
+	for _, m := range v.MemberVotes.Items.Aye.Items {
+		if m.ShortName == "Alvarez" {
+			hasAlvarez = true
+		}
+	}
+	if !hasAlvarez {
+		t.Errorf("expected to find Alvarez in aye votes")
+	}
 }

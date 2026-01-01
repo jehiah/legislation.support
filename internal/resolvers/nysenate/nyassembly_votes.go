@@ -55,7 +55,8 @@ func getClass(a []html.Attribute) string {
 func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, error) {
 	memberLookup := make(map[string]int)
 	for _, m := range members {
-		memberLookup[m.ShortName] = m.NumericID
+		name := strings.ToUpper(strings.TrimSpace(m.ShortName))
+		memberLookup[name] = m.NumericID
 	}
 	var out []BillVote
 	z := html.NewTokenizer(r)
@@ -100,6 +101,7 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 				dateNext = false
 				committeeNext = false
 				caption = ""
+				text = ""
 			case "td":
 				text = ""
 			case "caption":
@@ -114,8 +116,10 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 					inVoteName = true
 				case "vote":
 					inVote = true
+					text = ""
 				case "name":
 					inName = true
+					text = ""
 				}
 			}
 		case html.EndTagToken:
@@ -136,11 +140,11 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 					inFloorVote = false
 					mv := &MemberVotes{}
 					for i := 0; i+1 < len(tokens); i += 2 {
-						vote := strings.ToUpper(tokens[i])
-						shortName := strings.ToUpper(tokens[i+1])
-						vote = strings.TrimSpace(strings.TrimSuffix(vote, "‡"))
+						vote := strings.TrimSpace(strings.TrimSuffix(strings.ToUpper(tokens[i]), "‡"))
+						shortName := strings.TrimSpace(tokens[i+1])
+						lookupName := strings.ToUpper(shortName)
 						e := MemberEntry{
-							MemberID:  memberLookup[shortName],
+							MemberID:  memberLookup[lookupName],
 							Chamber:   bv.Committee.Chamber,
 							ShortName: shortName,
 						}
@@ -166,10 +170,11 @@ func parseAssemblyVotes(r io.Reader, members []legislature.Member) ([]BillVote, 
 				bv.Committee.Name = commitee
 				mv := &MemberVotes{}
 				for i := 0; i+1 < len(tokens); i += 2 {
-					shortName := strings.ToUpper(tokens[i])
-					vote := strings.ToUpper(tokens[i+1])
+					shortName := strings.TrimSpace(tokens[i])
+					vote := strings.TrimSpace(strings.ToUpper(tokens[i+1]))
+					lookupName := strings.ToUpper(shortName)
 					e := MemberEntry{
-						MemberID:  memberLookup[shortName],
+						MemberID:  memberLookup[lookupName],
 						Chamber:   bv.Committee.Chamber,
 						ShortName: shortName,
 					}
