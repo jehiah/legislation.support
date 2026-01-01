@@ -14,16 +14,16 @@ import (
 )
 
 var Sessions = legislature.Sessions{
-	{2025, 2026},
-	{2023, 2024},
-	{2021, 2022},
-	{2019, 2020},
-	{2017, 2018},
-	{2015, 2016},
-	{2013, 2014},
-	{2011, 2012},
-	{2009, 2010},
-	{2007, 2008},
+	{StartYear: 2025, EndYear: 2026},
+	{StartYear: 2023, EndYear: 2024},
+	{StartYear: 2021, EndYear: 2022},
+	{StartYear: 2019, EndYear: 2020},
+	{StartYear: 2017, EndYear: 2018},
+	{StartYear: 2015, EndYear: 2016},
+	{StartYear: 2013, EndYear: 2014},
+	{StartYear: 2011, EndYear: 2012},
+	{StartYear: 2009, EndYear: 2010},
+	{StartYear: 2007, EndYear: 2008},
 }
 
 type chamber string

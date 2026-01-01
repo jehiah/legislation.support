@@ -15,15 +15,16 @@ import (
 )
 
 var Sessions = legislature.Sessions{
-	{2024, 2025},
-	{2022, 2023},
-	{2018, 2021},
-	{2014, 2017},
-	{2010, 2013},
-	{2006, 2009},
-	{2004, 2005},
-	{2002, 2003},
-	{1998, 2001},
+	{StartYear: 2026, EndYear: 2029},
+	{StartYear: 2024, EndYear: 2025},
+	{StartYear: 2022, EndYear: 2023},
+	{StartYear: 2018, EndYear: 2021},
+	{StartYear: 2014, EndYear: 2017},
+	{StartYear: 2010, EndYear: 2013},
+	{StartYear: 2006, EndYear: 2009},
+	{StartYear: 2004, EndYear: 2005},
+	{StartYear: 2002, EndYear: 2003},
+	{StartYear: 1998, EndYear: 2001},
 }
 
 // var CurrentSession = Sessions.Current()
