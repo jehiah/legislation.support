@@ -1,56 +1,253 @@
 package congress
 
-// https://projects.propublica.org/api-docs/congress-api/bills/
-type Bill struct {
-	BillID                 string        `json:"bill_id"`
-	BillSlug               string        `json:"bill_slug"`
-	Congress               string        `json:"congress"`
-	Bill                   string        `json:"bill"`
-	BillType               string        `json:"bill_type"`
-	Number                 string        `json:"number"`
-	BillURI                string        `json:"bill_uri"`
-	Title                  string        `json:"title"`
-	ShortTitle             string        `json:"short_title"`
-	SponsorTitle           string        `json:"sponsor_title"`
-	Sponsor                string        `json:"sponsor"`
-	SponsorID              string        `json:"sponsor_id"`
-	SponsorURI             string        `json:"sponsor_uri"`
-	SponsorParty           string        `json:"sponsor_party"`
-	SponsorState           string        `json:"sponsor_state"`
-	GpoPdfURI              interface{}   `json:"gpo_pdf_uri"`
-	CongressdotgovURL      string        `json:"congressdotgov_url"`
-	GovtrackURL            string        `json:"govtrack_url"`
-	IntroducedDate         string        `json:"introduced_date"`
-	Active                 bool          `json:"active"`
-	LastVote               interface{}   `json:"last_vote"`
-	HousePassage           interface{}   `json:"house_passage"`
-	SenatePassage          interface{}   `json:"senate_passage"`
-	Enacted                interface{}   `json:"enacted"`
-	Vetoed                 interface{}   `json:"vetoed"`
-	Cosponsors             int           `json:"cosponsors"`
-	CosponsorsByParty      interface{}   `json:"cosponsors_by_party"`
-	WithdrawnCosponsors    int           `json:"withdrawn_cosponsors"`
-	PrimarySubject         string        `json:"primary_subject"`
-	Committees             string        `json:"committees"`
-	CommitteeCodes         []string      `json:"committee_codes"`
-	SubcommitteeCodes      []interface{} `json:"subcommittee_codes"`
-	LatestMajorActionDate  string        `json:"latest_major_action_date"`
-	LatestMajorAction      string        `json:"latest_major_action"`
-	HousePassageVote       interface{}   `json:"house_passage_vote"`
-	SenatePassageVote      interface{}   `json:"senate_passage_vote"`
-	Summary                string        `json:"summary"`
-	SummaryShort           string        `json:"summary_short"`
-	CboEstimateURL         interface{}   `json:"cbo_estimate_url"`
-	Versions               []interface{} `json:"versions"`
-	Actions                []Action      `json:"actions"`
-	PresidentialStatements []interface{} `json:"presidential_statements"`
-	Votes                  []interface{} `json:"votes"`
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/jehiah/legislation.support/internal/legislature"
+)
+
+// https://api.congress.gov/
+// https://github.com/LibraryOfCongress/api.congress.gov/blob/main/Documentation/BillEndpoint.md
+
+type BillResponse struct {
+	Bill Bill `json:"bill"`
 }
 
-type Action struct {
-	ID          int    `json:"id"`
-	Chamber     string `json:"chamber"`
-	ActionType  string `json:"action_type"`
-	Datetime    string `json:"datetime"`
-	Description string `json:"description"`
+type Bill struct {
+	Number                               string      `json:"number"`
+	Congress                             json.Number `json:"congress"`
+	Type                                 string      `json:"type"`              // Possible values are "HR", "S", "HJRES", "SJRES", "HCONRES", "SCONRES", "HRES", and "SRES".
+	OriginChamber                        string      `json:"originChamber"`     // House, Senate
+	OriginChamberCode                    string      `json:"originChamberCode"` // H, S
+	Title                                string      `json:"title"`
+	IntroducedDate                       string      `json:"introducedDate"`
+	UpdateDate                           string      `json:"updateDate"`
+	UpdateDateIncludingText              string      `json:"updateDateIncludingText"`
+	ConstitutionalAuthorityStatementText string      `json:"constitutionalAuthorityStatementText"`
+
+	Sponsors   []BillSponsor `json:"sponsors"`
+	Cosponsors struct {
+		Count                             json.Number `json:"count"`
+		CountIncludingWithdrawnCosponsors json.Number `json:"countIncludingWithdrawnCosponsors"`
+		URL                               string      `json:"url"`
+	} `json:"cosponsors"`
+
+	Committees struct {
+		Count json.Number `json:"count"`
+		URL   string      `json:"url"`
+	} `json:"committees"`
+
+	Actions struct {
+		Count json.Number  `json:"count"`
+		URL   string       `json:"url"`
+		Items []BillAction `json:"actions"`
+	} `json:"actions"`
+
+	Summaries struct {
+		Count json.Number   `json:"count"`
+		URL   string        `json:"url"`
+		Items []BillSummary `json:"summaries"`
+	} `json:"summaries"`
+
+	Titles struct {
+		Count json.Number `json:"count"`
+		URL   string      `json:"url"`
+		Items []BillTitle `json:"titles"`
+	} `json:"titles"`
+
+	LatestAction struct {
+		ActionDate string `json:"actionDate"`
+		Text       string `json:"text"`
+	} `json:"latestAction"`
+
+	Laws []struct {
+		Number string `json:"number"`
+		Type   string `json:"type"`
+	} `json:"laws"`
+
+	PolicyArea struct {
+		Name string `json:"name"`
+	} `json:"policyArea"`
+
+	Subjects struct {
+		Count json.Number `json:"count"`
+		URL   string      `json:"url"`
+	} `json:"subjects"`
+}
+
+type BillSponsor struct {
+	BioguideID  string      `json:"bioguideId"`
+	FullName    string      `json:"fullName"`
+	FirstName   string      `json:"firstName"`
+	LastName    string      `json:"lastName"`
+	Party       string      `json:"party"`
+	State       string      `json:"state"`
+	District    json.Number `json:"district"`
+	IsByRequest string      `json:"isByRequest"`
+	URL         string      `json:"url"`
+}
+
+type BillAction struct {
+	ActionDate   string `json:"actionDate"`
+	ActionTime   string `json:"actionTime"`
+	Text         string `json:"text"`
+	Type         string `json:"type"`
+	ActionCode   string `json:"actionCode"`
+	SourceSystem struct {
+		Code int    `json:"code"`
+		Name string `json:"name"`
+	} `json:"sourceSystem"`
+}
+
+type BillSummary struct {
+	ActionDate  string `json:"actionDate"`
+	ActionDesc  string `json:"actionDesc"`
+	Text        string `json:"text"`
+	UpdateDate  string `json:"updateDate"`
+	VersionCode string `json:"versionCode"`
+}
+
+type BillTitle struct {
+	Title               string `json:"title"`
+	TitleType           string `json:"titleType"`
+	TitleTypeCode       string `json:"titleTypeCode"`
+	BillTextVersionName string `json:"billTextVersionName"`
+	BillTextVersionCode string `json:"billTextVersionCode"`
+}
+
+// ID returns the LegislationID for this bill (e.g., "118-hr1234")
+func (b Bill) ID() legislature.LegislationID {
+	return legislature.LegislationID(fmt.Sprintf("%s-%s%s", b.Congress, b.Type, b.Number))
+}
+
+// ToLegislatureMember converts a BillSponsor to a legislature.Member
+func (s BillSponsor) ToLegislatureMember() legislature.Member {
+	return legislature.Member{
+		Slug:      s.BioguideID,
+		FullName:  s.FullName,
+		ShortName: s.FirstName + " " + s.LastName,
+		District:  normalizeDistrict(s.District),
+		URL:       s.URL,
+	}
+}
+
+// ToLegislation converts a Congress.gov Bill to a legislature.Legislation
+func (b Bill) ToLegislation(bodyID legislature.BodyID, session legislature.Session) (*legislature.Legislation, error) {
+	// Convert sponsors
+	var sponsors []legislature.Member
+	for _, s := range b.Sponsors {
+		sponsors = append(sponsors, s.ToLegislatureMember())
+	}
+
+	// Get the primary title
+	title := b.Title
+	if title == "" && len(b.Titles.Items) > 0 {
+		// Look for "Official Title as Introduced" or similar
+		for _, t := range b.Titles.Items {
+			if t.TitleTypeCode == "1" || t.TitleType == "Official Title as Introduced" {
+				title = t.Title
+				break
+			}
+		}
+		// Fallback to first title
+		if title == "" {
+			title = b.Titles.Items[0].Title
+		}
+	}
+
+	// Get summary
+	var summary string
+	if len(b.Summaries.Items) > 0 {
+		summary = b.Summaries.Items[0].Text
+	}
+
+	// Parse dates
+	introducedDate, _ := parseDate(b.IntroducedDate)
+	lastModified, _ := parseDate(b.UpdateDate)
+
+	// Determine bill type
+	billType := legislature.BillType
+	if b.Type == "HRES" || b.Type == "SRES" || b.Type == "HCONRES" || b.Type == "SCONRES" || b.Type == "HJRES" || b.Type == "SJRES" {
+		billType = legislature.ResolutionType
+	}
+
+	// Build the URL
+	congressNum := b.Congress.String()
+	billURL := fmt.Sprintf("https://www.congress.gov/bill/%sth-congress/%s/%s", congressNum, billTypeToName(b.Type), b.Number)
+
+	leg := &legislature.Legislation{
+		Body:           bodyID,
+		ID:             b.ID(),
+		DisplayID:      formatDisplayID(b.Type, b.Number),
+		Title:          title,
+		Summary:        summary,
+		Description:    "",
+		URL:            billURL,
+		Session:        session,
+		Status:         b.LatestAction.Text,
+		Type:           billType,
+		Sponsors:       sponsors,
+		IntroducedDate: introducedDate,
+		LastModified:   lastModified,
+	}
+
+	return leg, nil
+}
+
+// formatDisplayID formats the display ID (e.g., "H.R. 1234", "S. 874")
+func formatDisplayID(billType, number string) string {
+	switch billType {
+	case "HR":
+		return fmt.Sprintf("H.R. %s", number)
+	case "S":
+		return fmt.Sprintf("S. %s", number)
+	case "HJRES":
+		return fmt.Sprintf("H.J.Res. %s", number)
+	case "SJRES":
+		return fmt.Sprintf("S.J.Res. %s", number)
+	case "HCONRES":
+		return fmt.Sprintf("H.Con.Res. %s", number)
+	case "SCONRES":
+		return fmt.Sprintf("S.Con.Res. %s", number)
+	case "HRES":
+		return fmt.Sprintf("H.Res. %s", number)
+	case "SRES":
+		return fmt.Sprintf("S.Res. %s", number)
+	default:
+		return fmt.Sprintf("%s %s", billType, number)
+	}
+}
+
+// billTypeToName converts bill type code to full name for URL
+func billTypeToName(billType string) string {
+	switch billType {
+	case "HR":
+		return "house-bill"
+	case "S":
+		return "senate-bill"
+	case "HJRES":
+		return "house-joint-resolution"
+	case "SJRES":
+		return "senate-joint-resolution"
+	case "HCONRES":
+		return "house-concurrent-resolution"
+	case "SCONRES":
+		return "senate-concurrent-resolution"
+	case "HRES":
+		return "house-resolution"
+	case "SRES":
+		return "senate-resolution"
+	default:
+		return billType
+	}
+}
+
+// parseDate attempts to parse a date string in YYYY-MM-DD format
+func parseDate(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse("2006-01-02", dateStr)
 }

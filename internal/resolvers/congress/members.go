@@ -10,8 +10,20 @@ import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 )
 
-func (c *Congress) Members(ctx context.Context, session legislature.Session) ([]legislature.Member, error) {
-	members, err := c.api.Members(ctx, session)
+func (h *House) Members(ctx context.Context, session legislature.Session) ([]legislature.Member, error) {
+	members, err := h.api.Members(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+	var result []legislature.Member
+	for _, m := range members {
+		result = append(result, m.ToLegislatureMember())
+	}
+	return result, nil
+}
+
+func (s *Senate) Members(ctx context.Context, session legislature.Session) ([]legislature.Member, error) {
+	members, err := s.api.Members(ctx, session)
 	if err != nil {
 		return nil, err
 	}

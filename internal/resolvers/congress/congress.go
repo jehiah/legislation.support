@@ -21,9 +21,32 @@ import (
 
 // ENV CONGRESS_GOV_APIKEY
 
-type Congress struct {
+type House struct {
 	body legislature.Body
 	api  *CongressAPI
+}
+
+func (h House) Body() legislature.Body { return h.body }
+
+func NewHouse(body legislature.Body, token string) *House {
+	return &House{
+		body: body,
+		api:  NewAPI(token),
+	}
+}
+
+type Senate struct {
+	body legislature.Body
+	api  *CongressAPI
+}
+
+func (s Senate) Body() legislature.Body { return s.body }
+
+func NewSenate(body legislature.Body, token string) *Senate {
+	return &Senate{
+		body: body,
+		api:  NewAPI(token),
+	}
 }
 
 type CongressAPI struct {
