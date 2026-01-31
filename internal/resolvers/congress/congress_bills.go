@@ -69,3 +69,57 @@ func parseBillID(id legislature.LegislationID) (congress int, billType, number s
 
 	return 0, "", "", fmt.Errorf("invalid bill type in bill ID: %s", id)
 }
+
+// GetCosponsors fetches the full list of cosponsors for a bill
+func (a *CongressAPI) GetCosponsors(ctx context.Context, congress int, billType, number string) ([]BillSponsor, error) {
+	path := fmt.Sprintf("/v3/bill/%d/%s/%s/cosponsors", congress, billType, number)
+	params := url.Values{
+		"format": []string{"json"},
+		"limit":  []string{"250"},
+	}
+
+	var allCosponsors []BillSponsor
+	for {
+		var resp struct {
+			Cosponsors []BillSponsor `json:"cosponsors"`
+			Pagination Pagination    `json:"pagination"`
+		}
+		if err := a.get(ctx, path, params, &resp); err != nil {
+			return nil, err
+		}
+		allCosponsors = append(allCosponsors, resp.Cosponsors...)
+
+		path, params = nextRequest(resp.Pagination)
+		if path == "" {
+			break
+		}
+	}
+	return allCosponsors, nil
+}
+
+// GetActions fetches the full list of actions for a bill
+func (a *CongressAPI) GetActions(ctx context.Context, congress int, billType, number string) ([]BillAction, error) {
+	path := fmt.Sprintf("/v3/bill/%d/%s/%s/actions", congress, billType, number)
+	params := url.Values{
+		"format": []string{"json"},
+		"limit":  []string{"250"},
+	}
+
+	var allActions []BillAction
+	for {
+		var resp struct {
+			Actions    []BillAction `json:"actions"`
+			Pagination Pagination   `json:"pagination"`
+		}
+		if err := a.get(ctx, path, params, &resp); err != nil {
+			return nil, err
+		}
+		allActions = append(allActions, resp.Actions...)
+
+		path, params = nextRequest(resp.Pagination)
+		if path == "" {
+			break
+		}
+	}
+	return allActions, nil
+}

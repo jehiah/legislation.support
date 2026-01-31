@@ -9,12 +9,13 @@ import (
 )
 
 // https://api.congress.gov/
-// https://github.com/LibraryOfCongress/api.congress.gov/blob/main/Documentation/BillEndpoint.md
 
 type BillResponse struct {
 	Bill Bill `json:"bill"`
 }
 
+// Bill represents a bill from Congress.gov API
+// https://github.com/LibraryOfCongress/api.congress.gov/blob/main/Documentation/BillEndpoint.md
 type Bill struct {
 	Number                               string      `json:"number"`
 	Congress                             json.Number `json:"congress"`
@@ -92,13 +93,30 @@ type BillSponsor struct {
 type BillAction struct {
 	ActionDate   string `json:"actionDate"`
 	ActionTime   string `json:"actionTime"`
-	Text         string `json:"text"`
+	Text         string `json:"text,omitempty"`
 	Type         string `json:"type"`
 	ActionCode   string `json:"actionCode"`
 	SourceSystem struct {
 		Code int    `json:"code"`
 		Name string `json:"name"`
 	} `json:"sourceSystem"`
+	Committees    []CommitteeAction `json:"committees"`
+	RecordedVotes []RecordedVote    `json:"recordedVotes"`
+}
+
+type CommitteeAction struct {
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	SystemCode string `json:"systemCode"`
+}
+
+type RecordedVote struct {
+	Chamber       string `json:"chamber"`
+	Congress      int    `json:"congress"`
+	Date          string `json:"date"`
+	RollNumber    int    `json:"rollNumber"`
+	SessionNumber int    `json:"sessionNumber"`
+	URL           string `json:"url"` // URL to XML vote record
 }
 
 type BillSummary struct {

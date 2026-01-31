@@ -3,6 +3,8 @@ package congress
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -87,9 +89,15 @@ func (a CongressAPI) get(ctx context.Context, path string, params url.Values, v 
 		return err
 	}
 	defer resp.Body.Close()
-	dec := json.NewDecoder(resp.Body)
-	dec.UseNumber()
-	return dec.Decode(v)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("congress api error: %s: %s", resp.Status, string(body))
+	}
+	log.Printf("Congress API response: %s", string(body))
+	return json.Unmarshal(body, v)
 }
 
 type Pagination struct {

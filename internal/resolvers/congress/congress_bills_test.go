@@ -1,7 +1,6 @@
 package congress
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -170,7 +169,7 @@ func TestGetBill(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bill, err := api.GetBill(context.Background(), tt.congress, tt.billType, tt.number)
+			bill, err := api.GetBill(t.Context(), tt.congress, tt.billType, tt.number)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -224,6 +223,137 @@ func TestGetBill(t *testing.T) {
 			t.Logf("  Status: %s", leg.Status)
 			t.Logf("  Sponsors: %d", len(leg.Sponsors))
 			t.Logf("  URL: %s", leg.URL)
+		})
+	}
+}
+
+func TestGetCosponsors(t *testing.T) {
+	api := NewAPI("")
+
+	// Test with H.R. 7233 from 119th Congress
+	cosponsors, err := api.GetCosponsors(t.Context(), 119, "hr", "7233")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Found %d cosponsors for H.R. 7233", len(cosponsors))
+
+	// Verify basic structure if we have cosponsors
+	if len(cosponsors) > 0 {
+		first := cosponsors[0]
+		if first.BioguideID == "" {
+			t.Error("first cosponsor BioguideID is empty")
+		}
+		if first.FullName == "" {
+			t.Error("first cosponsor FullName is empty")
+		}
+		t.Logf("First cosponsor: %s (%s)", first.FullName, first.BioguideID)
+	}
+}
+
+func TestGetActions(t *testing.T) {
+	api := NewAPI("")
+
+	// Test with H.R. 1 from 119th Congress (should have many actions)
+	actions, err := api.GetActions(t.Context(), 119, "hr", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(actions) == 0 {
+		t.Fatal("expected actions, got none")
+	}
+
+	t.Logf("Found %d actions for H.R. 1", len(actions))
+
+	// Verify basic structure
+	first := actions[0]
+	if first.ActionDate == "" {
+		t.Error("first action ActionDate is empty")
+	}
+	if first.Text == "" {
+		t.Error("first action Text is empty")
+	}
+
+	t.Logf("First action: %s - %s", first.ActionDate, first.Text)
+
+	// Check for recorded votes
+	var votesFound int
+	for _, action := range actions {
+		if len(action.RecordedVotes) > 0 {
+			votesFound += len(action.RecordedVotes)
+			for _, rv := range action.RecordedVotes {
+				t.Logf("Recorded vote: %s roll %d on %s", rv.Chamber, rv.RollNumber, rv.Date)
+			}
+		}
+	}
+
+	if votesFound > 0 {
+		t.Logf("Found %d recorded votes in actions", votesFound)
+	}
+}
+
+func TestGetVoteXML(t *testing.T) {
+	tests := []struct {
+		name       string
+		url        string
+		wantCongress int
+		wantVoteNum int
+	}{
+		{
+			name:       "House Vote",
+			url:        "https://clerk.house.gov/evs/2025/roll190.xml",
+			wantCongress: 119,
+			wantVoteNum: 190,
+		},
+		{
+			name:       "Senate Vote",
+			url:        "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00333.xml",
+			wantCongress: 119,
+			wantVoteNum: 333,
+		},
+	}
+
+	api := NewAPI("")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vote, err := api.GetVoteXML(t.Context(), tt.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if vote == nil {
+				t.Fatal("expected vote, got nil")
+			}
+
+			// Verify basic vote fields
+			if vote.VoteNumber != tt.wantVoteNum {
+				t.Errorf("vote.VoteNumber = %d, want %d", vote.VoteNumber, tt.wantVoteNum)
+			}
+			if vote.Congress != tt.wantCongress {
+				t.Errorf("vote.Congress = %d, want %d", vote.Congress, tt.wantCongress)
+			}
+			if vote.VoteResult == "" {
+				t.Error("vote.VoteResult is empty")
+			}
+			if vote.Question == "" {
+				t.Error("vote.Question is empty")
+			}
+
+			t.Logf("Vote details:")
+			t.Logf("  Congress: %d", vote.Congress)
+			t.Logf("  Vote Number: %d", vote.VoteNumber)
+			t.Logf("  Question: %s", vote.Question)
+			t.Logf("  Result: %s", vote.VoteResult)
+			t.Logf("  Yea: %d, Nay: %d, Present: %d, Absent: %d",
+				vote.Count.Yeas, vote.Count.Nays,
+				vote.Count.Present, vote.Count.Absent)
+
+			if len(vote.Members) > 0 {
+				t.Logf("  Total members voted: %d", len(vote.Members))
+				t.Logf("  First vote: %s - %s", vote.Members[0].MemberFull, vote.Members[0].VoteCast)
+			}
 		})
 	}
 }
