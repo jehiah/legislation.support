@@ -356,6 +356,7 @@ func (a *App) ProfileEdit(ctx context.Context, p account.Profile, r *http.Reques
 	p.HideDistrict = r.Form.Get("hide_district") == "on"
 	p.HideSupportOppose = r.Form.Get("hide_support_oppose") == "on"
 	p.HideBillStatus = r.Form.Get("hide_bill_status") == "on"
+	p.HideParty = r.Form.Get("hide_party") == "on"
 	return a.UpdateProfile(ctx, p)
 }
 

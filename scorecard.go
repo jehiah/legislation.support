@@ -124,6 +124,18 @@ func (a *App) Scorecard(w http.ResponseWriter, r *http.Request) {
 		return pageBody.PersonWhipCounts[i].WhipCount.Percent() > pageBody.PersonWhipCounts[j].WhipCount.Percent()
 	})
 
+	// if no party, hide the party column
+	hasParty := false
+	for _, p := range pageBody.PersonWhipCounts {
+		if p.Party != "" {
+			hasParty = true
+			break
+		}
+	}
+	if !hasParty {
+		pageBody.Profile.HideParty = true
+	}
+
 	// log.Printf("bookmarks %#v", body.Bookmarks)
 
 	err = t.ExecuteTemplate(w, templateName, pageBody)

@@ -161,7 +161,7 @@ func (s BillSponsor) ToLegislatureMember() legislature.Member {
 		FullName:  fullName,
 		ShortName: shortName,
 		District:  normalizeDistrict(s.District),
-		Party:     s.Party,
+		Party:     normalizeParty(s.Party),
 		URL:       s.URL,
 	}
 }

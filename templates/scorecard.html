@@ -137,6 +137,7 @@ table.table-scorecard tbody tr th:first-child {
   <tr class="tablesorter-ignoreRow">
     <th></th>
     {{ if not $.Profile.HideDistrict }} <th></th> {{end}}
+    {{ if not $.Profile.HideParty }} <th></th> {{end}}
     <th></th>
     {{range .Data}}
     <th><div class="legislation-title">{{.Legislation.Title}}</div></th>
@@ -145,6 +146,7 @@ table.table-scorecard tbody tr th:first-child {
   <tr class="tablesorter-ignoreRow">
     <th></th>
     {{ if not $.Profile.HideDistrict }} <th></th>{{end}}
+    {{ if not $.Profile.HideParty }} <th></th> {{end}}
     <th></th>
     {{range .Data}}
     <th class="legislation-id">
@@ -162,6 +164,7 @@ table.table-scorecard tbody tr th:first-child {
   <tr class="tablesorter-ignoreRow">
     <th></th>
     {{ if not $.Profile.HideDistrict }}<th></th>{{end}}
+    {{ if not $.Profile.HideParty }} <th></th> {{end}}
     <th></th>
     {{range .Data}}
     <th><div class="status">{{.Status}}</div></th>
@@ -171,6 +174,7 @@ table.table-scorecard tbody tr th:first-child {
   <tr class="tablesorter-ignoreRow">
     <th></th>
     {{ if not $.Profile.HideDistrict }} <th></th> {{end}}
+    {{ if not $.Profile.HideParty }} <th></th> {{end}}
     <th></th>
     {{range .Data}}
     <th class="{{if .Oppose}}negative{{else}}affirmative{{end}}">{{if .Oppose}}Oppose{{else}}Support{{end}}</th>
@@ -179,6 +183,7 @@ table.table-scorecard tbody tr th:first-child {
   <tr>
     <th data-sortInitialOrder="asc" class="text-nowrap">{{.Metadata.PersonTitle}}</th>
     {{ if not $.Profile.HideDistrict }}<th>District</th>{{end}}
+    {{ if not $.Profile.HideParty }} <th>Party</th> {{end}}
     <th class="text-nowrap">{{ if $.Profile.ShowPercent}}% Correct{{end}}</th>
     {{range .Data}}
     <th class="percent-correct number" data-percent="{{printf "%0.1f%%" .WhipCount.PercentCorrect }}">
@@ -200,6 +205,7 @@ table.table-scorecard tbody tr th:first-child {
 <tr>
   <th class="full-name">{{$p.FullName}}</th>
   {{ if not $.Profile.HideDistrict }}<th class="district">{{$p.District}}</th>{{end}}
+  {{ if not $.Profile.HideParty }} <th class="party">{{$p.Party}}</th> {{end}}
   <td class="percent-correct number" data-percent="{{printf "%0.1f%%" ($S.WhipCount $i).Percent }}">{{printf "%0.1f%%" ($S.WhipCount $i).Percent }}</td>
   {{range $S.Data}}
     <td class="score {{(index .Scores $i).CSS}} " data-text="{{(index .Scores $i).Score}}">{{(index .Scores $i).Status}}</td>
@@ -220,7 +226,7 @@ table.table-scorecard tbody tr th:first-child {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="module">
 import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
-let sortColumn = {{ if $.Profile.HideDistrict }} 1 {{else}}2 {{end}};
+let sortColumn = 3 {{ if $.Profile.HideDistrict }} -1 {{end}} {{ if $.Profile.HideParty }} -1 {{end}} ;
 $("#data-table").tablesorter({
   sortList:[[sortColumn,1],[0,0]],
   theme: "bootstrap",

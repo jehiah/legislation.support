@@ -5,4 +5,5 @@ type ScorecardOptions struct {
 	HideBillStatus    bool
 	HideSupportOppose bool
 	ShowPercent       bool
+	HideParty         bool
 }

@@ -332,6 +332,10 @@ body {
         <input class="form-check-input" type="checkbox" role="switch" id="edit-support-oppose" name="hide_support_oppose" value="on" {{if .Profile.HideSupportOppose}}checked{{end}}>
         <label class="form-check-label" for="edit-support-oppose">Hide Support/Oppose Header</label>
       </div>
+      <div class="form-check form-switch mt-2 mb-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="edit-party" name="hide_party" value="on" {{if .Profile.HideParty}}checked{{end}}>
+        <label class="form-check-label" for="edit-party">Hide Party</label>
+      </div>
 
 
       <div class="mb-1 mt-3 text-bg-light p-3 text-end">

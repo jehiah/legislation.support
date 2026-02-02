@@ -285,8 +285,9 @@ func congressScorecardPeople(ctx context.Context, api *CongressAPI, chamber stri
 		}
 		person := legislature.ScorecardPerson{
 			FullName: shortName,
-			Party:    m.PartyName,
+			Party:    normalizeParty(m.PartyName),
 			District: district,
+			URL:      m.URL,
 		}
 		ids = append(ids, m.BioguideID)
 		people = append(people, person)

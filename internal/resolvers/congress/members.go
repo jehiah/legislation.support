@@ -75,7 +75,7 @@ func (m Member) ToLegislatureMember() legislature.Member {
 		FullName:  fullName,
 		ShortName: shortName,
 		District:  normalizeDistrict(m.District),
-		Party:     m.PartyName,
+		Party:     normalizeParty(m.PartyName),
 		URL:       m.URL,
 	}
 }
@@ -95,4 +95,16 @@ func normalizeDistrict(n json.Number) string {
 		return ""
 	}
 	return n.String()
+}
+func normalizeParty(p string) string {
+	switch p {
+	case "Democratic":
+		return "D"
+	case "Republican":
+		return "R"
+	case "Independent":
+		return "I"
+	default:
+		return p
+	}
 }
