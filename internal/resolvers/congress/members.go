@@ -75,10 +75,12 @@ func (m Member) ToLegislatureMember() legislature.Member {
 		FullName:  fullName,
 		ShortName: shortName,
 		District:  normalizeDistrict(m.District),
-		// Party:     m.PartyName,
+		Party:     m.PartyName,
+		URL:       m.URL,
 	}
 }
 
+// normalizeCongressName takes 'last, first' -> ('last', 'first last')
 func normalizeCongressName(raw string) (string, string) {
 	raw = strings.TrimSpace(raw)
 	last, first, _ := strings.Cut(raw, ",")

@@ -96,7 +96,7 @@ func (a CongressAPI) get(ctx context.Context, path string, params url.Values, v 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("congress api error: %s: %s", resp.Status, string(body))
 	}
-	log.Printf("Congress API response: %s", string(body))
+	// log.Printf("Congress API response: %s", string(body))
 	return json.Unmarshal(body, v)
 }
 

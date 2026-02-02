@@ -3,6 +3,7 @@ package congress
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
@@ -17,22 +18,23 @@ type BillResponse struct {
 // Bill represents a bill from Congress.gov API
 // https://github.com/LibraryOfCongress/api.congress.gov/blob/main/Documentation/BillEndpoint.md
 type Bill struct {
-	Number                               string      `json:"number"`
-	Congress                             json.Number `json:"congress"`
-	Type                                 string      `json:"type"`              // Possible values are "HR", "S", "HJRES", "SJRES", "HCONRES", "SCONRES", "HRES", and "SRES".
-	OriginChamber                        string      `json:"originChamber"`     // House, Senate
-	OriginChamberCode                    string      `json:"originChamberCode"` // H, S
-	Title                                string      `json:"title"`
-	IntroducedDate                       string      `json:"introducedDate"`
-	UpdateDate                           string      `json:"updateDate"`
-	UpdateDateIncludingText              string      `json:"updateDateIncludingText"`
-	ConstitutionalAuthorityStatementText string      `json:"constitutionalAuthorityStatementText"`
+	Number                               string `json:"number"`
+	Congress                             int    `json:"congress"`
+	Type                                 string `json:"type"`              // Possible values are "HR", "S", "HJRES", "SJRES", "HCONRES", "SCONRES", "HRES", and "SRES".
+	OriginChamber                        string `json:"originChamber"`     // House, Senate
+	OriginChamberCode                    string `json:"originChamberCode"` // H, S
+	Title                                string `json:"title"`
+	IntroducedDate                       string `json:"introducedDate"`
+	UpdateDate                           string `json:"updateDate"`
+	UpdateDateIncludingText              string `json:"updateDateIncludingText"`
+	ConstitutionalAuthorityStatementText string `json:"constitutionalAuthorityStatementText"`
 
 	Sponsors   []BillSponsor `json:"sponsors"`
 	Cosponsors struct {
-		Count                             json.Number `json:"count"`
-		CountIncludingWithdrawnCosponsors json.Number `json:"countIncludingWithdrawnCosponsors"`
-		URL                               string      `json:"url"`
+		Count                             json.Number   `json:"count"`
+		CountIncludingWithdrawnCosponsors json.Number   `json:"countIncludingWithdrawnCosponsors"`
+		URL                               string        `json:"url"`
+		Items                             []BillSponsor `json:"items"` // filled by GetCosponsors
 	} `json:"cosponsors"`
 
 	Committees struct {
@@ -137,27 +139,45 @@ type BillTitle struct {
 
 // ID returns the LegislationID for this bill (e.g., "118-hr1234")
 func (b Bill) ID() legislature.LegislationID {
-	return legislature.LegislationID(fmt.Sprintf("%s-%s%s", b.Congress, b.Type, b.Number))
+	return legislature.LegislationID(fmt.Sprintf("%d-%s%s", b.Congress, b.Type, b.Number))
 }
 
 // ToLegislatureMember converts a BillSponsor to a legislature.Member
 func (s BillSponsor) ToLegislatureMember() legislature.Member {
+	fullName := strings.TrimSpace(s.FullName)
+	shortName := strings.TrimSpace(strings.Join([]string{s.FirstName, s.LastName}, " "))
+	if shortName == "" && fullName != "" {
+		_, normalized := normalizeCongressName(fullName)
+		shortName = normalized
+	}
+	if fullName == "" {
+		fullName = shortName
+	}
+	if shortName == "" {
+		shortName = fullName
+	}
 	return legislature.Member{
 		Slug:      s.BioguideID,
-		FullName:  s.FullName,
-		ShortName: s.FirstName + " " + s.LastName,
+		FullName:  fullName,
+		ShortName: shortName,
 		District:  normalizeDistrict(s.District),
+		Party:     s.Party,
 		URL:       s.URL,
 	}
 }
 
 // ToLegislation converts a Congress.gov Bill to a legislature.Legislation
-func (b Bill) ToLegislation(bodyID legislature.BodyID, session legislature.Session) (*legislature.Legislation, error) {
+func (b Bill) ToLegislation(bodyID legislature.BodyID) (*legislature.Legislation, error) {
 	// Convert sponsors
 	var sponsors []legislature.Member
 	for _, s := range b.Sponsors {
 		sponsors = append(sponsors, s.ToLegislatureMember())
 	}
+	for _, s := range b.Cosponsors.Items {
+		sponsors = append(sponsors, s.ToLegislatureMember())
+	}
+
+	session := SessionForCongress(b.Congress)
 
 	// Get the primary title
 	title := b.Title
@@ -170,7 +190,7 @@ func (b Bill) ToLegislation(bodyID legislature.BodyID, session legislature.Sessi
 			}
 		}
 		// Fallback to first title
-		if title == "" {
+		if title == "" && len(b.Titles.Items) > 0 {
 			title = b.Titles.Items[0].Title
 		}
 	}
@@ -192,8 +212,7 @@ func (b Bill) ToLegislation(bodyID legislature.BodyID, session legislature.Sessi
 	}
 
 	// Build the URL
-	congressNum := b.Congress.String()
-	billURL := fmt.Sprintf("https://www.congress.gov/bill/%sth-congress/%s/%s", congressNum, billTypeToName(b.Type), b.Number)
+	billURL := fmt.Sprintf("https://www.congress.gov/bill/%dth-congress/%s/%s", b.Congress, billTypeToName(b.Type), b.Number)
 
 	leg := &legislature.Legislation{
 		Body:           bodyID,

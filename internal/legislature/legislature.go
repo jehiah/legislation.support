@@ -233,7 +233,7 @@ type Member struct {
 	ShortName string `firestore:",omitempty"`
 	URL       string `firestore:",omitempty"`
 	District  string `firestore:",omitempty"`
-	// TODO: party? parties?
+	Party     string `firestore:",omitempty"`
 	// Todo body?
 }
 

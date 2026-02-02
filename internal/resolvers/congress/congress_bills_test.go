@@ -133,7 +133,7 @@ func TestGetBill(t *testing.T) {
 		number        string
 		wantNumber    string
 		wantType      string
-		wantCongress  string
+		wantCongress  int
 		wantOrigin    string
 		wantDisplayID string
 		wantLegType   legislature.LegislationType
@@ -145,7 +145,7 @@ func TestGetBill(t *testing.T) {
 			number:        "996",
 			wantNumber:    "996",
 			wantType:      "HRES",
-			wantCongress:  "119",
+			wantCongress:  119,
 			wantOrigin:    "House",
 			wantDisplayID: "H.Res. 996",
 			wantLegType:   legislature.ResolutionType,
@@ -157,7 +157,7 @@ func TestGetBill(t *testing.T) {
 			number:        "7233",
 			wantNumber:    "7233",
 			wantType:      "HR",
-			wantCongress:  "119",
+			wantCongress:  119,
 			wantOrigin:    "House",
 			wantDisplayID: "H.R. 7233",
 			wantLegType:   legislature.BillType,
@@ -184,7 +184,7 @@ func TestGetBill(t *testing.T) {
 			if bill.Type != tt.wantType {
 				t.Errorf("bill.Type = %q, want %q", bill.Type, tt.wantType)
 			}
-			if bill.Congress.String() != tt.wantCongress {
+			if bill.Congress != tt.wantCongress {
 				t.Errorf("bill.Congress = %q, want %q", bill.Congress, tt.wantCongress)
 			}
 			if bill.OriginChamber != tt.wantOrigin {
@@ -195,13 +195,13 @@ func TestGetBill(t *testing.T) {
 			}
 
 			// Verify ID generation
-			expectedID := legislature.LegislationID(fmt.Sprintf("%s-%s%s", tt.wantCongress, tt.wantType, tt.wantNumber))
+			expectedID := legislature.LegislationID(fmt.Sprintf("%d-%s%s", tt.wantCongress, tt.wantType, tt.wantNumber))
 			if bill.ID() != expectedID {
 				t.Errorf("bill.ID() = %q, want %q", bill.ID(), expectedID)
 			}
 
 			// Verify conversion to Legislation
-			leg, err := bill.ToLegislation("us-house", session)
+			leg, err := bill.ToLegislation("us-house")
 			if err != nil {
 				t.Fatalf("ToLegislation() error = %v", err)
 			}
@@ -295,22 +295,22 @@ func TestGetActions(t *testing.T) {
 
 func TestGetVoteXML(t *testing.T) {
 	tests := []struct {
-		name       string
-		url        string
+		name         string
+		url          string
 		wantCongress int
-		wantVoteNum int
+		wantVoteNum  int
 	}{
 		{
-			name:       "House Vote",
-			url:        "https://clerk.house.gov/evs/2025/roll190.xml",
+			name:         "House Vote",
+			url:          "https://clerk.house.gov/evs/2025/roll190.xml",
 			wantCongress: 119,
-			wantVoteNum: 190,
+			wantVoteNum:  190,
 		},
 		{
-			name:       "Senate Vote",
-			url:        "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00333.xml",
+			name:         "Senate Vote",
+			url:          "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00333.xml",
 			wantCongress: 119,
-			wantVoteNum: 333,
+			wantVoteNum:  333,
 		},
 	}
 

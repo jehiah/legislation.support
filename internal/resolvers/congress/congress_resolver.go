@@ -4,106 +4,45 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/jehiah/legislation.support/internal/legislature"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
-
-// Regex patterns for congress.gov URLs
-// Examples:
-// https://www.congress.gov/bill/118th-congress/house-bill/1234
-// https://www.congress.gov/bill/118th-congress/senate-bill/874
-var congressBillPattern = regexp.MustCompile(`/bill/(\d+)th-congress/(house-bill|senate-bill|house-joint-resolution|senate-joint-resolution|house-concurrent-resolution|senate-concurrent-resolution|house-resolution|senate-resolution)/(\d+)`)
 
 // SupportedDomains for House
 func (h House) SupportedDomains() []string {
-	return []string{"congress.gov"}
+	return []string{"www.congress.gov", "congress.gov"}
 }
 
 // SupportedDomains for Senate
 func (s Senate) SupportedDomains() []string {
-	return []string{"congress.gov"}
+	return []string{"www.congress.gov", "congress.gov"}
 }
 
 // Lookup finds a House bill from a URL
 func (h House) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
-	if u.Hostname() != "www.congress.gov" {
-		return nil, nil
-	}
-
-	matches := congressBillPattern.FindStringSubmatch(u.Path)
-	if matches == nil || len(matches) != 4 {
-		return nil, nil
-	}
-
-	congressNum, billTypeName, number := matches[1], matches[2], matches[3]
-
-	// Only handle House bills for the House resolver
-	if !strings.HasPrefix(billTypeName, "house-") {
-		return nil, nil
-	}
-
-	billType := billTypeNameToCode(billTypeName)
-	if billType == "" {
-		return nil, fmt.Errorf("unknown bill type: %s", billTypeName)
-	}
-
-	log.WithContext(ctx).Infof("found congress.gov House URL %s", u.String())
-
-	congress, err := strconv.Atoi(congressNum)
+	bill, err := h.api.Lookup(ctx, u)
 	if err != nil {
 		return nil, err
 	}
-
-	bill, err := h.api.GetBill(ctx, congress, billType, number)
-	if err != nil {
-		return nil, err
+	if bill.OriginChamber != "House" {
+		return nil, fmt.Errorf("bill %s has OriginChamber:%q", bill.Number, bill.OriginChamber)
 	}
-
-	session := Sessions.Find(congress*2 + 1787) // Convert congress number to year
-	return bill.ToLegislation(h.body.ID, session)
+	return bill.ToLegislation(h.body.ID)
 }
 
 // Lookup finds a Senate bill from a URL
 func (s Senate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
-	if u.Hostname() != "www.congress.gov" {
-		return nil, nil
-	}
-
-	matches := congressBillPattern.FindStringSubmatch(u.Path)
-	if matches == nil || len(matches) != 4 {
-		return nil, nil
-	}
-
-	congressNum, billTypeName, number := matches[1], matches[2], matches[3]
-
-	// Only handle Senate bills for the Senate resolver
-	if !strings.HasPrefix(billTypeName, "senate-") {
-		return nil, nil
-	}
-
-	billType := billTypeNameToCode(billTypeName)
-	if billType == "" {
-		return nil, fmt.Errorf("unknown bill type: %s", billTypeName)
-	}
-
-	log.WithContext(ctx).Infof("found congress.gov Senate URL %s", u.String())
-
-	congress, err := strconv.Atoi(congressNum)
+	bill, err := s.api.Lookup(ctx, u)
 	if err != nil {
 		return nil, err
 	}
-
-	bill, err := s.api.GetBill(ctx, congress, billType, number)
-	if err != nil {
-		return nil, err
+	if bill.OriginChamber != "Senate" {
+		return nil, fmt.Errorf("bill %s has OriginChamber:%q", bill.Number, bill.OriginChamber)
 	}
-
-	session := Sessions.Find(congress*2 + 1787) // Convert congress number to year
-	return bill.ToLegislation(s.body.ID, session)
+	return bill.ToLegislation(s.body.ID)
 }
 
 // billTypeNameToCode converts URL bill type name to API code
@@ -147,8 +86,7 @@ func (h House) Refresh(ctx context.Context, billID legislature.LegislationID) (*
 		return nil, err
 	}
 
-	session := SessionForCongress(congress)
-	return bill.ToLegislation(h.body.ID, session)
+	return bill.ToLegislation(h.body.ID)
 }
 
 // Refresh fetches updated data for a Senate bill
@@ -168,36 +106,29 @@ func (s Senate) Refresh(ctx context.Context, billID legislature.LegislationID) (
 		return nil, err
 	}
 
-	session := SessionForCongress(congress)
-	return bill.ToLegislation(s.body.ID, session)
+	return bill.ToLegislation(s.body.ID)
+}
+
+func Link(l legislature.LegislationID) *url.URL {
+	congress, billType, number, err := parseBillID(l)
+	if err != nil {
+		log.Errorf("congress.Link: unable to parse bill ID %q: %v", l, err)
+	}
+	return &url.URL{
+		Scheme: "https",
+		Host:   "www.congress.gov",
+		Path:   fmt.Sprintf("/bill/%dth-congress/%s/%s", congress, billTypeToName(billType), number),
+	}
 }
 
 // Link generates a URL for a House bill
 func (h House) Link(l legislature.LegislationID) *url.URL {
-	congress, billType, number, err := parseBillID(l)
-	if err != nil {
-		return nil
-	}
-
-	return &url.URL{
-		Scheme: "https",
-		Host:   "www.congress.gov",
-		Path:   fmt.Sprintf("/bill/%dth-congress/%s/%s", congress, billTypeToName(billType), number),
-	}
+	return Link(l)
 }
 
 // Link generates a URL for a Senate bill
 func (s Senate) Link(l legislature.LegislationID) *url.URL {
-	congress, billType, number, err := parseBillID(l)
-	if err != nil {
-		return nil
-	}
-
-	return &url.URL{
-		Scheme: "https",
-		Host:   "www.congress.gov",
-		Path:   fmt.Sprintf("/bill/%dth-congress/%s/%s", congress, billTypeToName(billType), number),
-	}
+	return Link(l)
 }
 
 // DisplayID returns a formatted display ID (e.g., "H.R. 1234")
@@ -220,10 +151,179 @@ func (s Senate) DisplayID(l legislature.LegislationID) string {
 
 // Scorecard is not yet implemented for Congress
 func (h House) Scorecard(ctx context.Context, items []legislature.Scorable) (*legislature.Scorecard, error) {
-	return nil, fmt.Errorf("Scorecard not implemented for House")
+	return scorecardForCongress(ctx, h.body, h.api, "House", items)
 }
 
 // Scorecard is not yet implemented for Congress
 func (s Senate) Scorecard(ctx context.Context, items []legislature.Scorable) (*legislature.Scorecard, error) {
-	return nil, fmt.Errorf("Scorecard not implemented for Senate")
+	return scorecardForCongress(ctx, s.body, s.api, "Senate", items)
+}
+
+// skip votes like "Motion to reconsider laid on the table"
+func (a BillAction) IsVoteIrelevant() bool {
+	switch {
+	case strings.HasPrefix(a.Text, "Motion to reconsider laid on the table"):
+		return true
+	}
+	return false
+}
+
+func scorecardForCongress(ctx context.Context, body legislature.Body, api *CongressAPI, chamber string, items []legislature.Scorable) (*legislature.Scorecard, error) {
+	s := &legislature.Scorecard{
+		Body: &body,
+		Metadata: legislature.ScorecardMetadata{
+			PersonTitle: body.MemberName,
+		},
+		Data: make([]legislature.ScoredBookmark, len(items)),
+	}
+
+	people, peopleIDs, err := congressScorecardPeople(ctx, api, chamber)
+	if err != nil {
+		return nil, err
+	}
+	s.People = people
+
+	g := new(errgroup.Group)
+	g.SetLimit(5)
+	for i, item := range items {
+		i, item := i, item
+		g.Go(func() error {
+			sb := item.NewScore()
+			congress, billType, number, err := parseBillID(sb.Legislation.ID)
+			if err != nil {
+				return err
+			}
+
+			bill, err := api.GetBill(ctx, congress, billType, number)
+			if err != nil {
+				return err
+			}
+
+			// actions, err := api.GetActions(ctx, congress, billType, number)
+			// if err != nil {
+			// 	return err
+			// }
+
+			sb.Status = bill.LatestAction.Text
+			// sb.Committee = committeeFromActions(actions)
+
+			scores := make(map[string]string)
+			for _, sponsor := range bill.Sponsors {
+				if sponsor.BioguideID == "" {
+					continue
+				}
+				scores[sponsor.BioguideID] = "Sponsor"
+			}
+			for _, cosponsor := range bill.Cosponsors.Items {
+				if cosponsor.BioguideID == "" {
+					continue
+				}
+				scores[cosponsor.BioguideID] = "Sponsor"
+			}
+
+			// for _, action := range actions {
+			// 	if action.IsVoteIrelevant() {
+			// 		continue
+			// 	}
+			// 	for _, rv := range action.RecordedVotes {
+			// 		if !voteMatchesChamber(rv.Chamber, chamber) {
+			// 			continue
+			// 		}
+			// 		vote, err := api.GetVoteXML(ctx, rv.URL)
+			// 		if err != nil {
+			// 			return err
+			// 		}
+			// 		for _, member := range vote.Members {
+			// 			memberID := member.LISMemberID
+			// 			if memberID == "" {
+			// 				continue
+			// 			}
+			// 			scores[memberID] = normalizeVoteCast(member.VoteCast)
+			// 		}
+			// 	}
+			// }
+
+			for idx := range s.People {
+				status := scores[peopleIDs[idx]]
+				sb.Scores = append(sb.Scores, legislature.Score{Status: status, Desired: !sb.Oppose})
+			}
+
+			s.Data[i] = sb
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func congressScorecardPeople(ctx context.Context, api *CongressAPI, chamber string) ([]legislature.ScorecardPerson, []string, error) {
+	members, err := api.Members(ctx, Sessions.Current())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var people []legislature.ScorecardPerson
+	var ids []string
+	for _, m := range members {
+		isHouseMember := normalizeDistrict(m.District) != ""
+		if chamber == "House" && !isHouseMember {
+			continue
+		}
+		if chamber == "Senate" && isHouseMember {
+			continue
+		}
+		_, shortName := normalizeCongressName(m.Name)
+		district := normalizeDistrict(m.District)
+		if district != "" && m.State != "" {
+			district = fmt.Sprintf("%s-%s", m.State, district)
+		} else if district == "" {
+			district = m.State
+		}
+		person := legislature.ScorecardPerson{
+			FullName: shortName,
+			Party:    m.PartyName,
+			District: district,
+		}
+		ids = append(ids, m.BioguideID)
+		people = append(people, person)
+	}
+
+	return people, ids, nil
+}
+
+func committeeFromActions(actions []BillAction) string {
+	for _, action := range actions {
+		for _, committee := range action.Committees {
+			if committee.Name != "" {
+				return committee.Name
+			}
+		}
+	}
+	return ""
+}
+
+func voteMatchesChamber(voteChamber, chamber string) bool {
+	if chamber == "" || voteChamber == "" {
+		return true
+	}
+	return strings.EqualFold(voteChamber, chamber)
+}
+
+func normalizeVoteCast(vote string) string {
+	switch strings.ToLower(strings.TrimSpace(vote)) {
+	case "yea", "yes", "aye":
+		return "Aye"
+	case "nay", "no":
+		return "Nay"
+	case "present":
+		return "Present"
+	case "not voting", "absent", "not-voting":
+		return "Not Voting"
+	default:
+		return strings.TrimSpace(vote)
+	}
 }
