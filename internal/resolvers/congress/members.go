@@ -63,18 +63,27 @@ type Member struct {
 	BioguideID string      `json:"bioguideId"`
 	Name       string      `json:"name"`
 	District   json.Number `json:"district"`
-	PartyName  string      `json:"partyName"`
-	State      string      `json:"state"`
+	PartyName  string      `json:"partyName"` // "Democratic", ...
+	State      string      `json:"state"`     // "Rhode Island",
 	URL        string      `json:"url"`
 }
 
 func (m Member) ToLegislatureMember() legislature.Member {
 	fullName, shortName := normalizeCongressName(m.Name)
+
+	var district string
+	state := normalizeShortState(m.State)
+	if m.District.String() != "" {
+		district = state + "-" + m.District.String()
+	} else {
+		district = state
+	}
+
 	return legislature.Member{
 		Slug:      m.BioguideID, // i.e. S001203 - first char from last name + digits
 		FullName:  fullName,
 		ShortName: shortName,
-		District:  normalizeDistrict(m.District),
+		District:  district,
 		Party:     normalizeParty(m.PartyName),
 		URL:       m.URL,
 	}
@@ -87,15 +96,15 @@ func normalizeCongressName(raw string) (string, string) {
 	return last, strings.TrimSpace(first + " " + last)
 }
 
-func normalizeDistrict(n json.Number) string {
-	if n == "" {
-		return ""
+func normalizeDistrict(n json.Number, state string) string {
+	state = normalizeShortState(state)
+	if n.String() != "" && n.String() != "0" {
+		return state + "-" + n.String()
+	} else {
+		return state
 	}
-	if n.String() == "0" {
-		return ""
-	}
-	return n.String()
 }
+
 func normalizeParty(p string) string {
 	switch p {
 	case "Democratic":
@@ -107,4 +116,15 @@ func normalizeParty(p string) string {
 	default:
 		return p
 	}
+}
+
+// normalizeShortState converts full state names to their postal abbreviations.
+// New York -> NY, ...
+func normalizeShortState(s string) string {
+	for _, state := range States {
+		if state.Long == s {
+			return state.ID
+		}
+	}
+	return s
 }

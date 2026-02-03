@@ -81,15 +81,17 @@ type Bill struct {
 }
 
 type BillSponsor struct {
-	BioguideID  string      `json:"bioguideId"`
-	FullName    string      `json:"fullName"`
-	FirstName   string      `json:"firstName"`
-	LastName    string      `json:"lastName"`
-	Party       string      `json:"party"`
-	State       string      `json:"state"`
-	District    json.Number `json:"district"`
-	IsByRequest string      `json:"isByRequest"`
-	URL         string      `json:"url"`
+	BioguideID      string      `json:"bioguideId"`
+	FullName        string      `json:"fullName"` //  "Rep. Craig, Angie [D-MN-2]",
+	FirstName       string      `json:"firstName"`
+	LastName        string      `json:"lastName"`
+	Party           string      `json:"party"`
+	State           string      `json:"state"`
+	District        json.Number `json:"district"`
+	IsByRequest     string      `json:"isByRequest"`
+	URL             string      `json:"url"`
+	SponsorDate     string      `json:"sponsorDate,omitempty"`
+	OriginalSponsor bool        `json:"originalSponsor,omitempty"`
 }
 
 type BillAction struct {
@@ -160,7 +162,7 @@ func (s BillSponsor) ToLegislatureMember() legislature.Member {
 		Slug:      s.BioguideID,
 		FullName:  fullName,
 		ShortName: shortName,
-		District:  normalizeDistrict(s.District),
+		District:  normalizeDistrict(s.District, s.State),
 		Party:     normalizeParty(s.Party),
 		URL:       s.URL,
 	}

@@ -269,7 +269,7 @@ func congressScorecardPeople(ctx context.Context, api *CongressAPI, chamber stri
 	var people []legislature.ScorecardPerson
 	var ids []string
 	for _, m := range members {
-		isHouseMember := normalizeDistrict(m.District) != ""
+		isHouseMember := m.District.String() != ""
 		if chamber == "House" && !isHouseMember {
 			continue
 		}
@@ -277,16 +277,10 @@ func congressScorecardPeople(ctx context.Context, api *CongressAPI, chamber stri
 			continue
 		}
 		_, shortName := normalizeCongressName(m.Name)
-		district := normalizeDistrict(m.District)
-		if district != "" && m.State != "" {
-			district = fmt.Sprintf("%s-%s", m.State, district)
-		} else if district == "" {
-			district = m.State
-		}
 		person := legislature.ScorecardPerson{
 			FullName: shortName,
 			Party:    normalizeParty(m.PartyName),
-			District: district,
+			District: normalizeDistrict(m.District, m.State),
 			URL:      m.URL,
 		}
 		ids = append(ids, m.BioguideID)
