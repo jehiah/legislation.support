@@ -92,7 +92,7 @@ func (h *HouseRollCallVote) ToRollCallVote() *RollCallVote {
 		VoteQuestionText:    h.VoteMetadata.VoteQuestion,
 		VoteResult:          h.VoteMetadata.VoteResult,
 		Question:            h.VoteMetadata.VoteQuestion,
-		VoteTitle:           h.VoteMetadata.VoteDesc,
+		VoteDocumentText:    h.VoteMetadata.VoteDesc,
 		MajorityRequirement: h.VoteMetadata.Majority,
 	}
 

@@ -10,6 +10,9 @@ import (
 	"github.com/jehiah/legislation.support/internal/legislature"
 )
 
+const ChamberHouse = "House"
+const ChamberSenate = "Senate"
+
 func (h *House) Members(ctx context.Context, session legislature.Session) ([]legislature.Member, error) {
 	members, err := h.api.Members(ctx, session)
 	if err != nil {
@@ -17,6 +20,16 @@ func (h *House) Members(ctx context.Context, session legislature.Session) ([]leg
 	}
 	var result []legislature.Member
 	for _, m := range members {
+		var match bool
+		for _, term := range m.Term.Items {
+			if term.ContainsSession(session) && strings.HasPrefix(term.Chamber, ChamberHouse) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			continue
+		}
 		result = append(result, m.ToLegislatureMember())
 	}
 	return result, nil
@@ -29,6 +42,16 @@ func (s *Senate) Members(ctx context.Context, session legislature.Session) ([]le
 	}
 	var result []legislature.Member
 	for _, m := range members {
+		var match bool
+		for _, term := range m.Term.Items {
+			if term.ContainsSession(session) && strings.HasPrefix(term.Chamber, ChamberSenate) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			continue
+		}
 		result = append(result, m.ToLegislatureMember())
 	}
 	return result, nil
@@ -66,17 +89,27 @@ type Member struct {
 	PartyName  string      `json:"partyName"` // "Democratic", ...
 	State      string      `json:"state"`     // "Rhode Island",
 	URL        string      `json:"url"`
+	Term       struct {
+		Items []Term `json:"item"`
+	} `json:"terms"`
+}
+
+type Term struct {
+	StartYear int    `json:"startYear"`
+	EndYear   int    `json:"endYear,omitempty"`
+	Chamber   string `json:"chamber"` // "House of Representatives" or "Senate"
+}
+
+func (t Term) ContainsSession(session legislature.Session) bool {
+	return t.StartYear <= session.StartYear && (t.EndYear == 0 || t.EndYear >= session.EndYear)
 }
 
 func (m Member) ToLegislatureMember() legislature.Member {
 	fullName, shortName := normalizeCongressName(m.Name)
 
-	var district string
-	state := normalizeShortState(m.State)
+	district := normalizeShortState(m.State)
 	if m.District.String() != "" {
-		district = state + "-" + m.District.String()
-	} else {
-		district = state
+		district += "-" + m.District.String()
 	}
 
 	return legislature.Member{
