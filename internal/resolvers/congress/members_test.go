@@ -18,4 +18,20 @@ func TestCongress_Members(t *testing.T) {
 		t.Fatalf("expected members, got none")
 	}
 
+	m := findMember(members, "G000594")
+	if m == nil {
+		t.Fatalf("expected to find member G000594, but did not")
+	}
+	if got := m.ToLegislatureMember().FullName; got != "Tony Gonzales" {
+		t.Fatalf("member %s full name = %q, want %q", m.BioguideID, got, "Tony Gonzales")
+	}
+}
+
+func findMember(members []congress.Member, bioguideID string) *congress.Member {
+	for _, m := range members {
+		if m.BioguideID == bioguideID {
+			return &m
+		}
+	}
+	return nil
 }

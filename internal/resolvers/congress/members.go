@@ -122,11 +122,21 @@ func (m Member) ToLegislatureMember() legislature.Member {
 	}
 }
 
-// normalizeCongressName takes 'last, first' -> ('last', 'first last')
+// normalizeCongressName takes 'last, first' -> ('first last', 'last')
 func normalizeCongressName(raw string) (string, string) {
 	raw = strings.TrimSpace(raw)
 	last, first, _ := strings.Cut(raw, ",")
-	return last, strings.TrimSpace(first + " " + last)
+	last = strings.TrimSpace(last)
+	first = strings.TrimSpace(first)
+	fullName := strings.TrimSpace(first + " " + last)
+	if fullName == "" {
+		fullName = last
+	}
+	shortName := last
+	if shortName == "" {
+		shortName = fullName
+	}
+	return fullName, shortName
 }
 
 func normalizeDistrict(n json.Number, state string) string {

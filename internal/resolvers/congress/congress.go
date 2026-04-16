@@ -73,6 +73,7 @@ func (a CongressAPI) get(ctx context.Context, path string, params url.Values, v 
 	}
 	u := "https://api.congress.gov" + path
 	fullURL := u
+	params.Set("format", "json")
 	if encoded := params.Encode(); encoded != "" {
 		fullURL = fullURL + "?" + encoded
 	}

@@ -21,6 +21,7 @@ func main() {
 	bodyStr := flag.String("body", "us-house", "legislative body")
 	flag.Parse()
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006/01/02 15:04:05", FullTimestamp: true})
+	log.SetLevel(log.DebugLevel)
 	ctx := context.Background()
 	db := datastore.New(datastore.NewClient(ctx))
 
@@ -214,6 +215,7 @@ func writeScorecardSheet(f *excelize.File, sheet string, people []legislature.Me
 	// data rows: one per member
 	for i, p := range people {
 		row = 4 + i
+		log.Infof("row %d: writing member %s %#v", row, p.FullName, p)
 		if err := setCell(f, sheet, 1, row, p.FullName); err != nil {
 			return err
 		}
@@ -224,7 +226,7 @@ func writeScorecardSheet(f *excelize.File, sheet string, people []legislature.Me
 			return err
 		}
 
-		memberID := people[i].ID()
+		memberID := p.ID()
 		col = 4
 		for _, b := range bills {
 			// sponsors column
