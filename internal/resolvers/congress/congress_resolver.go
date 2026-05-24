@@ -26,6 +26,9 @@ func (h House) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation
 	if err != nil {
 		return nil, err
 	}
+	if bill == nil {
+		return nil, nil
+	}
 	if bill.OriginChamber != "House" {
 		return nil, fmt.Errorf("bill %s has OriginChamber:%q", bill.Number, bill.OriginChamber)
 	}
@@ -37,6 +40,9 @@ func (s Senate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislatio
 	bill, err := s.api.Lookup(ctx, u)
 	if err != nil {
 		return nil, err
+	}
+	if bill == nil {
+		return nil, nil
 	}
 	if bill.OriginChamber != "Senate" {
 		return nil, fmt.Errorf("bill %s has OriginChamber:%q", bill.Number, bill.OriginChamber)

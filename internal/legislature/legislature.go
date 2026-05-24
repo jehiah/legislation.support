@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -131,7 +132,20 @@ func (r Resolvers) SupportedDomains() []string {
 
 func (r Resolvers) Lookup(ctx context.Context, u *url.URL) (*Legislation, error) {
 	var e error
+	hostname := strings.ToLower(u.Hostname())
 	for _, rr := range r {
+		if len(rr.SupportedDomains()) > 0 {
+			matched := false
+			for _, domain := range rr.SupportedDomains() {
+				if hostname == strings.ToLower(domain) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
 		d, err := rr.Lookup(ctx, u)
 		if err != nil {
 			e = err
