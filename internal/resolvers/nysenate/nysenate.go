@@ -88,7 +88,7 @@ var nysenatePattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[
 var nyAssemblyPattern = regexp.MustCompile("/legislation/bills/((199|200|201|202)[0-9])/((A|a)[0-9]+)([A-F]|/|/amendment.*)?$")
 
 func (a NYSenate) SupportedDomains() []string {
-	return []string{"nysenate.gov"}
+	return []string{"www.nysenate.gov"}
 }
 
 func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
@@ -115,7 +115,7 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 }
 
 func (a NYAssembly) SupportedDomains() []string {
-	return []string{"assembly.state.ny.us"}
+	return []string{"assembly.state.ny.us", "nyassembly.gov"}
 }
 
 func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
