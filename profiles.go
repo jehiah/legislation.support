@@ -191,6 +191,19 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 	a.ShowProfile(w, ctx, r, uid, profile, Message{})
 }
 
+func compactSupportedUrls(urls []string) []string {
+	seen := make(map[string]bool)
+	var compacted []string
+	for _, u := range urls {
+		seen[strings.Replace(u, "www.", "", 1)] = true
+	}
+	for u := range seen {
+		compacted = append(compacted, u)
+	}
+	slices.Sort(compacted)
+	return compacted
+}
+
 func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Request, uid account.UID, profile *account.Profile, message Message) {
 	templateName := "profile.html"
 	t := newTemplate(a.templateFS, "profile.html")
@@ -220,9 +233,7 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 		ArchivedBookmarks: make(account.Bookmarks, 0),
 		SupportedDomains:  resolvers.SupportedDomains(),
 	}
-	body.SupportedDomains = append(body.SupportedDomains, metadatasites.SupportedDomains()...)
-	sort.Strings(body.SupportedDomains)
-	body.SupportedDomains = slices.Compact(body.SupportedDomains)
+	body.SupportedDomains = compactSupportedUrls(append(body.SupportedDomains, metadatasites.SupportedDomains()...))
 
 	if body.EditMode {
 		templateName = "profile_edit.html"
