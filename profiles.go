@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -221,6 +222,7 @@ func (a *App) ShowProfile(w http.ResponseWriter, ctx context.Context, r *http.Re
 	}
 	body.SupportedDomains = append(body.SupportedDomains, metadatasites.SupportedDomains()...)
 	sort.Strings(body.SupportedDomains)
+	body.SupportedDomains = slices.Compact(body.SupportedDomains)
 
 	if body.EditMode {
 		templateName = "profile_edit.html"

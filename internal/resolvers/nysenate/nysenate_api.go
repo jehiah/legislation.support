@@ -19,9 +19,11 @@ type NYSenateAPI struct {
 }
 
 func (a NYSenateAPI) GetBill(ctx context.Context, session, printNo string) (*Bill, error) {
-	if session == "" || printNo == "" {
+	if session == "" || printNo == "" || len(printNo) < 2 {
 		return nil, nil
 	}
+	printNo = printNo[:1] + strings.TrimLeft(printNo[1:], "0")
+
 	path := fmt.Sprintf("/api/3/bills/%s/%s", url.PathEscape(session), url.PathEscape(printNo))
 	var data BillResponse
 	log.WithContext(ctx).WithField("session", session).WithField("printNo", printNo).Infof("looking up bill %s-%s", session, printNo)

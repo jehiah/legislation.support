@@ -80,13 +80,15 @@ func TestNYAssemblyLookup(t *testing.T) {
 		url string
 		// found bool
 		legislature.BodyID
+		billNumber string
 	}
 
 	tests := []testCase{
-		{"https://www.nysenate.gov/legislation/bills/2021/A4854", legislature.BodyID("A")},
-		{"https://assembly.state.ny.us/leg/?default_fld=&bn=A04854&term=2021&Summary=Y&Actions=Y&Text=Y&Committee%26nbspVotes=Y&Floor%26nbspVotes=Y", legislature.BodyID("A")},
-		{"https://nyassembly.gov/leg/?default_fld=&leg_video=&bn=A08273&term=2023&Summary=Y&Memo=Y&Chamber%26nbspVideo%2FTranscript=Y", legislature.BodyID("A")},
-		{"https://assembly.state.ny.us/leg/?default_fld=&bn=S01982&term=2023", legislature.BodyID("S")},
+		{"https://www.nysenate.gov/legislation/bills/2021/A4854", legislature.BodyID("A"), "2021-A4854"},
+		{"https://assembly.state.ny.us/leg/?default_fld=&bn=A04854&term=2021&Summary=Y&Actions=Y&Text=Y&Committee%26nbspVotes=Y&Floor%26nbspVotes=Y", legislature.BodyID("A"), "2021-A4854"},
+		{"https://nyassembly.gov/leg/?default_fld=&leg_video=&bn=A08273&term=2023&Summary=Y&Memo=Y&Chamber%26nbspVideo%2FTranscript=Y", legislature.BodyID("A"), "2023-A8273"},
+		{"https://assembly.state.ny.us/leg/?default_fld=&bn=S01982&term=2023", legislature.BodyID("S"), "2023-S1982"},
+		{"https://www.assembly.state.ny.us/leg/?bn=A06920&term=2025", legislature.BodyID("A"), "2025-A6920"},
 	}
 	a := NewNYAssembly(legislature.Body{}, os.Getenv("NY_SENATE_TOKEN"))
 	for i, tc := range tests {
@@ -102,6 +104,9 @@ func TestNYAssemblyLookup(t *testing.T) {
 			}
 			if b == nil {
 				t.Fatal("exptected URL")
+			}
+			if b.ID != legislature.LegislationID(tc.billNumber) {
+				t.Fatalf("expected bill number %s, got %s", tc.billNumber, b.ID)
 			}
 		})
 	}

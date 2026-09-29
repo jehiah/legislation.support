@@ -115,7 +115,7 @@ func (a NYSenate) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislat
 }
 
 func (a NYAssembly) SupportedDomains() []string {
-	return []string{"assembly.state.ny.us", "nyassembly.gov"}
+	return []string{"www.assembly.state.ny.us", "assembly.state.ny.us", "nyassembly.gov"}
 }
 
 func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legislation, error) {
@@ -129,7 +129,7 @@ func (a NYAssembly) Lookup(ctx context.Context, u *url.URL) (*legislature.Legisl
 		}
 		log.Infof("found nysenate URL %s", u.String())
 		session, printNo = p[1], p[3]
-	case "assembly.state.ny.us", "nyassembly.gov":
+	case "www.assembly.state.ny.us", "assembly.state.ny.us", "nyassembly.gov":
 		if u.Path != "/leg/" {
 			return nil, nil
 		}
