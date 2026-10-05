@@ -39,7 +39,7 @@ func New(b legislature.Body) *NYC {
 
 func (n NYC) Body() legislature.Body { return n.body }
 
-var introPattern = regexp.MustCompile("/(res-)?[0-9]{1,4}-20[12][0-9]$")
+var introPattern = regexp.MustCompile("/(res-)?[0-9]{1,4}-20[12][0-9]\\+?$")
 
 func fileToLegislationID(file string) legislature.LegislationID {
 	fileType, fileNo, _ := strings.Cut(file, " ")
@@ -235,7 +235,7 @@ func (n NYC) get(ctx context.Context, u string, v interface{}) error {
 
 func (n NYC) IntroJSON(ctx context.Context, u string) (*db.Legislation, error) {
 	var d db.Legislation
-	err := n.get(ctx, u+".json", &d)
+	err := n.get(ctx, strings.TrimSuffix(u, "+")+".json", &d)
 	if err != nil {
 		return nil, err
 	}

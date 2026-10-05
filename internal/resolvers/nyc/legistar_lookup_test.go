@@ -2,7 +2,10 @@ package nyc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 )
@@ -43,5 +46,46 @@ func TestLookupLegistarLegislationDetail(t *testing.T) {
 				t.Errorf("got %s expected %s", l.String(), tc.Expected)
 			}
 		})
+	}
+}
+
+func TestIntroPattern(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{path: "/1141-2018", want: true},
+		{path: "/1141-2018+", want: true},
+		{path: "/res-0707-2025+", want: true},
+		{path: "/1141-2018++", want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
+			if got := introPattern.MatchString(tc.path); got != tc.want {
+				t.Errorf("introPattern.MatchString(%q) = %t, want %t", tc.path, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIntroJSONTrimsPlusSuffix(t *testing.T) {
+	var requestedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		_ = json.NewEncoder(w).Encode(map[string]string{"File": "Int 1141-2018"})
+	}))
+	defer server.Close()
+
+	var n NYC
+	d, err := n.IntroJSON(context.Background(), server.URL+"/1141-2018+")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d == nil || d.File != "Int 1141-2018" {
+		t.Fatalf("got legislation %#v, want File %q", d, "Int 1141-2018")
+	}
+	if requestedPath != "/1141-2018.json" {
+		t.Errorf("requested path = %q, want %q", requestedPath, "/1141-2018.json")
 	}
 }
